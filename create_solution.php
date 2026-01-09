@@ -7,13 +7,14 @@ $log_id_get = isset($_GET['log_id']) ? (int) $_GET['log_id'] : 0;
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tạo Giải Pháp</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
-<body>
-    <div class="container">
-        <div class="card">
+<body class="form-page">
+    <div class="form-wrapper">
+        <div class="form-card">
             <h1>Tạo Giải Pháp Mới</h1>
 
             <form method="POST">
@@ -33,7 +34,7 @@ $log_id_get = isset($_GET['log_id']) ? (int) $_GET['log_id'] : 0;
                 <input type="text" name="solution_name" placeholder="Tên giải pháp" required>
 
                 <label>Nội dung:</label>
-                <textarea name="solution_content" rows="8" placeholder="Nội dung giải pháp chi tiết"
+                <textarea name="solution_content" rows="6" placeholder="Nội dung giải pháp chi tiết"
                     required></textarea>
 
                 <label>Phiên bản:</label>
@@ -46,8 +47,8 @@ $log_id_get = isset($_GET['log_id']) ? (int) $_GET['log_id'] : 0;
                     <option value="done">Hoàn thành</option>
                 </select>
 
-                <div style="margin-top: 20px;">
-                    <button type="submit" name="add_solution">Tạo Giải Pháp</button>
+                <div class="form-actions">
+                    <button type="submit" name="add_solution" class="btn">Tạo Giải Pháp</button>
                     <a href="index.php" class="btn btn-secondary">Quay Lại</a>
                 </div>
             </form>

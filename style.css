@@ -339,6 +339,71 @@ tr:hover td {
     }
 }
 
+/* ===== FORM PAGE STYLES (Create Solution, etc.) ===== */
+.form-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    margin: 0;
+}
+
+.form-wrapper {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.form-card {
+    background: var(--card-bg);
+    border-radius: 20px;
+    padding: 40px 32px;
+    border: 1px solid rgba(255,255,255,0.05);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.4s ease-out;
+}
+
+.form-card h1 {
+    text-align: center;
+    margin-bottom: 24px;
+    font-size: 24px;
+}
+
+.form-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.form-actions .btn {
+    width: 100%;
+    justify-content: center;
+}
+
+/* Mobile Form Adjustments */
+@media screen and (max-width: 480px) {
+    .form-page {
+        padding: 16px;
+        align-items: flex-start;
+        padding-top: 40px;
+    }
+    
+    .form-wrapper {
+        max-width: 100%;
+    }
+    
+    .form-card {
+        padding: 24px 20px;
+        border-radius: 16px;
+    }
+    
+    .form-card h1 {
+        font-size: 20px;
+    }
+}
+
 /* Wizard / Stepped Flow UI */
 .wizard-overlay {
     display: none;

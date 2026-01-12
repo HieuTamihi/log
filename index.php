@@ -1,5 +1,10 @@
 <?php
 include 'db.php';
+
+// Ngăn chặn trình duyệt cache trang index.php này
+header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1.
+header("Pragma: no-cache"); // HTTP 1.0.
+header("Expires: 0"); // Proxies.
 requireLogin();  // Nếu bạn đã có hàm này
 
 // Hiển thị tên người dùng (đã đăng nhập)
@@ -96,13 +101,13 @@ if ($resLast && $resLast->num_rows > 0) {
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2">
 
     <!-- Register Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
+                navigator.serviceWorker.register('sw.js?v=2')
                     .then(reg => console.log('Service Worker registered'))
                     .catch(err => console.log('Service Worker registration failed:', err));
             });
@@ -125,10 +130,14 @@ if ($resLast && $resLast->num_rows > 0) {
 
         <!-- Thông báo -->
         <?php if (isset($_SESSION['success_message'])): ?>
-            <div class="alert success"><?php echo $_SESSION['success_message']; unset($_SESSION['success_message']); ?></div>
+            <div class="alert success">
+                <?php echo $_SESSION['success_message'];
+                unset($_SESSION['success_message']); ?>
+            </div>
         <?php endif; ?>
         <?php if (isset($_SESSION['error_message'])): ?>
-            <div class="alert error"><?php echo $_SESSION['error_message']; unset($_SESSION['error_message']); ?></div>
+            <div class="alert error"><?php echo $_SESSION['error_message'];
+            unset($_SESSION['error_message']); ?></div>
         <?php endif; ?>
 
         <!-- Page Header -->

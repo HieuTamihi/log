@@ -1,4 +1,4 @@
-const CACHE_NAME = 'leverage-fluency-v1';
+const CACHE_NAME = 'leverage-fluency-v2'; // Đã cập nhật lên v2 để clear cache cũ
 const urlsToCache = [
     '/',
     '/index.php',
@@ -16,30 +16,46 @@ self.addEventListener('install', event => {
                 return cache.addAll(urlsToCache);
             })
     );
+    self.skipWaiting(); // Kích hoạt ngay lập tức
 });
 
-// Fetch from cache first, then network
+// NETWORK FIRST STRATEGY (Ưu tiên mạng, rớt mạng mới dùng cache)
 self.addEventListener('fetch', event => {
     event.respondWith(
-        caches.match(event.request)
+        fetch(event.request)
             .then(response => {
-                // Return cached version or fetch from network
-                return response || fetch(event.request);
+                // 1. Tải thành công từ mạng -> Trả về dữ liệu này
+                
+                // (Tùy chọn) Lưu bản mới nhất vào cache để dành cho lần sau offline
+                if (response && response.status === 200 && response.type === 'basic') {
+                    const responseToCache = response.clone();
+                    caches.open(CACHE_NAME).then(cache => {
+                        cache.put(event.request, responseToCache);
+                    });
+                }
+                
+                return response;
+            })
+            .catch(() => {
+                // 2. Mất mạng hoặc lỗi server -> Lấy từ cache
+                return caches.match(event.request);
             })
     );
 });
 
-// Update cache when new version is available
+// Xóa cache cũ khi có version mới
 self.addEventListener('activate', event => {
+    const cacheWhitelist = [CACHE_NAME];
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(cacheName => {
-                    if (cacheName !== CACHE_NAME) {
+                    if (!cacheWhitelist.includes(cacheName)) {
                         return caches.delete(cacheName);
                     }
                 })
             );
         })
     );
+    return self.clients.claim();
 });

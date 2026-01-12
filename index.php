@@ -7,31 +7,45 @@ $username = $_SESSION['username'] ?? 'Người dùng';
 
 // XỬ LÝ THÊM LOG - SỬ DỤNG PRG ĐỂ TRÁNH RESUBMIT
 if (isset($_POST['add_log'])) {
-    $name = trim($_POST['log_name']);
+    $name = trim($_POST['log_name'] ?? 'Vấn đề mới');
     $content = trim($_POST['log_content'] ?? '');
     $version = $_POST['log_version'] ?: '1.0';
     $status = $_POST['log_status'] ?? 'open';
-    $frequency = $_POST['frequency'] ?? '';
+    $emotion = $_POST['emotion_level'] ?? '';
     $user_id = (int) getCurrentUserId();
 
-    // Only name is required, content is optional
-    if (!empty($name)) {
-        // Add frequency info to content if provided
-        if (!empty($frequency)) {
-            $content = "[Frequency: " . ucfirst($frequency) . "] " . $content;
+    // Content is required (description)
+    if (!empty($content)) {
+        // Add emotion info to content if provided
+        if (!empty($emotion)) {
+            $emotionLabels = [
+                'frustrated' => 'Rất khó chịu',
+                'annoyed' => 'Hơi khó chịu',
+                'neutral' => 'Bình thường'
+            ];
+            $emotionLabel = $emotionLabels[$emotion] ?? $emotion;
+            $content = "[" . $emotionLabel . "] " . $content;
+        }
+
+        // Use content as name if name is default
+        if ($name === 'Vấn đề mới' && strlen($content) > 0) {
+            // Take first 50 chars of content as name
+            $name = mb_substr(strip_tags($content), 0, 50);
+            if (strlen($content) > 50)
+                $name .= '...';
         }
 
         $stmt = $conn->prepare("INSERT INTO logs (name, content, version, status, user_id) VALUES (?, ?, ?, ?, ?)");
         $stmt->bind_param("ssssi", $name, $content, $version, $status, $user_id);
 
         if ($stmt->execute()) {
-            $_SESSION['success_message'] = "Thêm vấn đề thành công!";
+            $_SESSION['success_message'] = "Đã lưu vấn đề!";
         } else {
             $_SESSION['error_message'] = "Lỗi khi thêm: " . $stmt->error;
         }
         $stmt->close();
     } else {
-        $_SESSION['error_message'] = "Vui lòng nhập tiêu đề!";
+        $_SESSION['error_message'] = "Vui lòng nhập mô tả vấn đề!";
     }
 
     // QUAN TRỌNG: Redirect để tránh resubmit
@@ -60,17 +74,6 @@ if ($resLast && $resLast->num_rows > 0) {
     $lastLogData = $resLast->fetch_assoc();
     $lastLogName = $lastLogData['name'];
     $lastLogContent = $lastLogData['content'];
-}
-
-
-// Hiển thị thông báo (nếu có) sau redirect
-if (isset($_SESSION['success_message'])) {
-    echo '<div class="alert success">' . $_SESSION['success_message'] . '</div>';
-    unset($_SESSION['success_message']);
-}
-if (isset($_SESSION['error_message'])) {
-    echo '<div class="alert error">' . $_SESSION['error_message'] . '</div>';
-    unset($_SESSION['error_message']);
 }
 ?>
 <!DOCTYPE html>
@@ -120,9 +123,17 @@ if (isset($_SESSION['error_message'])) {
             Xin chào <strong><?php echo htmlspecialchars($username); ?></strong> | <a href="logout.php">Đăng xuất</a>
         </div>
 
-        <!-- Page Header - Lovable Style -->
+        <!-- Thông báo -->
+        <?php if (isset($_SESSION['success_message'])): ?>
+            <div class="alert success"><?php echo $_SESSION['success_message']; unset($_SESSION['success_message']); ?></div>
+        <?php endif; ?>
+        <?php if (isset($_SESSION['error_message'])): ?>
+            <div class="alert error"><?php echo $_SESSION['error_message']; unset($_SESSION['error_message']); ?></div>
+        <?php endif; ?>
+
+        <!-- Page Header -->
         <h1 class="page-title">Leverage Fluency</h1>
-        <p class="page-subtitle">Repeated problem capture</p>
+        <p class="page-subtitle">Ghi lại vấn đề lặp lại</p>
 
         <?php if ($countLogged > 0): ?>
             <!-- Stats Dashboard - Only show if there are problems -->
@@ -144,29 +155,13 @@ if (isset($_SESSION['error_message'])) {
 
         <!-- Main Content Area -->
         <div class="main-content-area">
-            <?php if (!empty($lastLogName)): ?>
-                <!-- Task Completed Card - Lovable Style -->
-                <div class="task-completed-card">
-                    <div class="task-completed-header">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                        </svg>
-                        <span>Task completed</span>
-                    </div>
-                    <div class="task-completed-title"><?php echo htmlspecialchars($lastLogName); ?></div>
-                </div>
-            <?php endif; ?>
-
-            <!-- Hero Button - Lovable Style (Not Fixed) -->
+            <!-- Hero Button - Tạo vấn đề mới -->
             <button onclick="openWizard()" class="hero-btn-inline">
-                Simulate task completion
+                + Tạo vấn đề
             </button>
-            <p class="hero-hint">In production, this flow triggers automatically</p>
 
             <?php if ($countLogged > 0): ?>
-                <!-- View Problems Button - Lovable Style -->
+                <!-- View Problems Button -->
                 <button class="view-problems-btn" id="toggleListBtn">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -177,7 +172,7 @@ if (isset($_SESSION['error_message'])) {
                         <line x1="3" y1="12" x2="3.01" y2="12"></line>
                         <line x1="3" y1="18" x2="3.01" y2="18"></line>
                     </svg>
-                    View problems (<?php echo $countLogged; ?>)
+                    Xem vấn đề (<?php echo $countLogged; ?>)
                 </button>
             <?php endif; ?>
         </div>
@@ -282,167 +277,47 @@ if (isset($_SESSION['error_message'])) {
                 <button class="wizard-close-btn" onclick="closeWizard()">✕</button>
 
                 <form method="POST" id="wizardForm">
-                    <!-- Hidden fields for additional data -->
+                    <!-- Hidden fields -->
                     <input type="hidden" name="log_version" value="1.0">
                     <input type="hidden" name="log_status" id="hiddenStatus" value="open">
-                    <input type="hidden" name="cost_type" id="hiddenCostType" value="">
+                    <input type="hidden" name="log_name" id="hiddenLogName" value="Vấn đề mới">
                     <input type="hidden" name="emotion_level" id="hiddenEmotionLevel" value="">
-                    <input type="hidden" name="frequency" id="hiddenFrequency" value="">
 
-                    <!-- Step 1: Did this just repeat? (FIRST - like Lovable) -->
+                    <!-- Step 1: Mô tả vấn đề -->
                     <div class="wizard-step active" id="step1">
-                        <h2 class="wizard-question centered">Did this just repeat?</h2>
+                        <h2 class="wizard-question">Mô tả vấn đề</h2>
+                        <p class="wizard-hint">Ghi lại điều gì đang xảy ra</p>
 
-                        <div class="button-stack">
-                            <button type="button" class="stack-btn secondary" onclick="selectRepeatOption('same')">Same
-                                as last time</button>
-                            <button type="button" class="stack-btn primary"
-                                onclick="selectRepeatOption('yes')">Yes</button>
-                            <button type="button" class="stack-btn outline"
-                                onclick="selectRepeatOption('no')">No</button>
+                        <textarea name="log_content" class="big-textarea" placeholder="Ví dụ: Lại quên mật khẩu wifi..."
+                            required></textarea>
+
+                        <div class="wizard-actions">
+                            <button type="button" class="btn" onclick="goToStep(2)">Tiếp tục</button>
                         </div>
                     </div>
 
-                    <!-- Step 2: Problem Description -->
+                    <!-- Step 2: Mức độ khó chịu -->
                     <div class="wizard-step" id="step2">
-                        <h2 class="wizard-question">What's happening?</h2>
-                        <p class="wizard-hint">Describe the problem you're experiencing</p>
-
-                        <input type="text" name="log_name" class="big-input" placeholder="Brief title for this issue..."
-                            required>
-                        <textarea name="log_content" class="big-textarea"
-                            placeholder="Describe what went wrong and any context that might help..."></textarea>
-
-                        <div class="wizard-actions">
-                            <span class="wizard-back" onclick="goToStep(1)">Back</span>
-                            <button type="button" class="btn" onclick="goToStep(3)">Continue</button>
-                        </div>
-                    </div>
-
-                    <!-- Step 3: How often does this happen? (NEW) -->
-                    <div class="wizard-step" id="step3">
-                        <h2 class="wizard-question">How often does this happen?</h2>
-
-                        <div class="frequency-grid">
-                            <button type="button" class="frequency-btn"
-                                onclick="selectFrequency('daily')">Daily</button>
-                            <button type="button" class="frequency-btn"
-                                onclick="selectFrequency('weekly')">Weekly</button>
-                            <button type="button" class="frequency-btn"
-                                onclick="selectFrequency('monthly')">Monthly</button>
-                            <button type="button" class="frequency-btn" onclick="selectFrequency('rare')">Rare</button>
-                        </div>
-
-                        <div class="wizard-actions">
-                            <span class="wizard-back" onclick="goToStep(2)">Back</span>
-                        </div>
-                    </div>
-
-                    <!-- Step 4: Cost Type Selection (like Lovable) -->
-                    <div class="wizard-step" id="step4">
-                        <h2 class="wizard-question">What does this cost when it repeats?</h2>
-                        <p class="wizard-hint">Select the primary impact of this issue</p>
-
-                        <div class="icon-selector" id="costTypeGroup">
-                            <div class="icon-option" onclick="selectCostType(this, 'time')">
-                                <div class="icon-box">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <polyline points="12 6 12 12 16 14"></polyline>
-                                    </svg>
-                                </div>
-                                <span class="icon-label">Time</span>
-                            </div>
-                            <div class="icon-option" onclick="selectCostType(this, 'money')">
-                                <div class="icon-box">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round">
-                                        <line x1="12" y1="1" x2="12" y2="23"></line>
-                                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                                    </svg>
-                                </div>
-                                <span class="icon-label">Money</span>
-                            </div>
-                            <div class="icon-option" onclick="selectCostType(this, 'errors')">
-                                <div class="icon-box">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round">
-                                        <path
-                                            d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
-                                        </path>
-                                        <line x1="12" y1="9" x2="12" y2="13"></line>
-                                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                                    </svg>
-                                </div>
-                                <span class="icon-label">Errors</span>
-                            </div>
-                            <div class="icon-option" onclick="selectCostType(this, 'stress')">
-                                <div class="icon-box">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <path d="M8 15h8"></path>
-                                        <circle cx="9" cy="9" r="1"></circle>
-                                        <circle cx="15" cy="9" r="1"></circle>
-                                    </svg>
-                                </div>
-                                <span class="icon-label">Stress</span>
-                            </div>
-                            <div class="icon-option" onclick="selectCostType(this, 'reputation')">
-                                <div class="icon-box">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round">
-                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                                        <circle cx="9" cy="7" r="4"></circle>
-                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                                    </svg>
-                                </div>
-                                <span class="icon-label">Reputation</span>
-                            </div>
-                        </div>
-
-                        <div class="wizard-actions">
-                            <span class="wizard-back" onclick="goToStep(3)">Back</span>
-                        </div>
-                    </div>
-
-                    <!-- Step 5: Emotion Level (Auto-submit on select) -->
-                    <div class="wizard-step" id="step5">
-                        <h2 class="wizard-question">How frustrated are you?</h2>
-                        <p class="wizard-hint">Click to log and we'll save your problem</p>
+                        <h2 class="wizard-question">Mức độ khó chịu?</h2>
+                        <p class="wizard-hint">Chọn để lưu vấn đề</p>
 
                         <div class="emotion-selector" id="emotionGroup">
-                            <div class="emotion-option" onclick="selectEmotionAndSubmit('very_frustrated')">
-                                <span class="emotion-emoji">😤</span>
-                                <span class="emotion-label">Very Frustrated</span>
-                            </div>
                             <div class="emotion-option" onclick="selectEmotionAndSubmit('frustrated')">
                                 <span class="emotion-emoji">😠</span>
-                                <span class="emotion-label">Frustrated</span>
+                                <span class="emotion-label">Rất khó chịu</span>
                             </div>
                             <div class="emotion-option" onclick="selectEmotionAndSubmit('annoyed')">
                                 <span class="emotion-emoji">😕</span>
-                                <span class="emotion-label">Annoyed</span>
+                                <span class="emotion-label">Hơi khó chịu</span>
                             </div>
                             <div class="emotion-option" onclick="selectEmotionAndSubmit('neutral')">
                                 <span class="emotion-emoji">😐</span>
-                                <span class="emotion-label">Neutral</span>
-                            </div>
-                            <div class="emotion-option" onclick="selectEmotionAndSubmit('fine')">
-                                <span class="emotion-emoji">🙂</span>
-                                <span class="emotion-label">It's Fine</span>
+                                <span class="emotion-label">Bình thường</span>
                             </div>
                         </div>
 
                         <div class="wizard-actions">
-                            <span class="wizard-back" onclick="goToStep(4)">Back</span>
+                            <span class="wizard-back" onclick="goToStep(1)">Quay lại</span>
                         </div>
                     </div>
 
@@ -474,12 +349,6 @@ if (isset($_SESSION['error_message'])) {
             const wizard = document.getElementById("addLogWizard");
             let currentStep = 1;
 
-            // Last log data for "Same as last time" feature
-            const lastLogData = {
-                name: <?php echo json_encode($lastLogName); ?>,
-                content: <?php echo json_encode($lastLogContent); ?>
-            };
-
             function openWizard() {
                 wizard.style.display = 'block';
                 currentStep = 1;
@@ -499,58 +368,22 @@ if (isset($_SESSION['error_message'])) {
                     if (index === 0) step.classList.add('active');
                 });
                 // Reset selections
-                document.querySelectorAll('.icon-option').forEach(opt => opt.classList.remove('selected'));
                 document.querySelectorAll('.emotion-option').forEach(opt => opt.classList.remove('selected'));
-                document.querySelectorAll('.stack-btn').forEach(btn => btn.classList.remove('selected'));
-                document.querySelectorAll('.frequency-btn').forEach(btn => btn.classList.remove('selected'));
                 // Reset form
                 document.getElementById('wizardForm').reset();
-                document.getElementById('hiddenCostType').value = '';
                 document.getElementById('hiddenEmotionLevel').value = '';
-                document.getElementById('hiddenFrequency').value = '';
                 currentStep = 1;
-            }
-
-            // Step 1: "Did this just repeat?" options
-            function selectRepeatOption(option) {
-                // Visual feedback
-                event.currentTarget.classList.add('selected');
-
-                if (option === 'same') {
-                    // Same as last time - auto-fill with last log and submit immediately
-                    if (lastLogData.name) {
-                        document.querySelector('input[name="log_name"]').value = lastLogData.name;
-                        document.querySelector('textarea[name="log_content"]').value = lastLogData.content || 'Repeated issue';
-                        document.getElementById('hiddenCostType').value = 'recurring';
-                        document.getElementById('hiddenEmotionLevel').value = 'neutral';
-                        document.getElementById('hiddenStatus').value = 'in_progress';
-
-                        // Submit form after brief animation
-                        setTimeout(() => {
-                            document.getElementById('hiddenSubmit').click();
-                        }, 300);
-                    } else {
-                        // No previous log, go to step 2
-                        setTimeout(() => goToStep(2), 200);
-                    }
-                } else if (option === 'yes') {
-                    // Yes - go to describe problem
-                    setTimeout(() => goToStep(2), 200);
-                } else {
-                    // No - close wizard
-                    setTimeout(() => closeWizard(), 200);
-                }
             }
 
             function goToStep(stepNum) {
                 const currentStepEl = document.getElementById(`step${currentStep}`);
                 const nextStepEl = document.getElementById(`step${stepNum}`);
 
-                // Validation for step 2 (only title is required)
-                if (currentStep === 2 && stepNum > 2) {
-                    const name = document.querySelector('input[name="log_name"]').value;
-                    if (!name) {
-                        alert("Please enter a title!");
+                // Validation for step 1 (description required)
+                if (currentStep === 1 && stepNum > 1) {
+                    const content = document.querySelector('textarea[name="log_content"]').value;
+                    if (!content.trim()) {
+                        alert("Vui lòng nhập mô tả vấn đề!");
                         return;
                     }
                 }
@@ -565,42 +398,7 @@ if (isset($_SESSION['error_message'])) {
                     nextStepEl.style.display = "block";
                     nextStepEl.classList.add("step-enter-right", "active");
                     currentStep = stepNum;
-
-                    // Focus on input if going to step 2
-                    if (stepNum === 2) {
-                        setTimeout(() => document.querySelector('input[name="log_name"]').focus(), 100);
-                    }
                 }, 250);
-            }
-
-            // Cost Type Selection - Auto advance to step 5
-            function selectCostType(el, value) {
-                // Remove selection from all
-                document.querySelectorAll('.icon-option').forEach(opt => opt.classList.remove('selected'));
-                // Add selection to clicked
-                el.classList.add('selected');
-                // Set hidden value
-                document.getElementById('hiddenCostType').value = value;
-
-                // Auto advance to step 5 after a brief delay
-                setTimeout(() => {
-                    goToStep(5);
-                }, 300);
-            }
-
-            // Frequency Selection - Auto advance to step 4 (cost)
-            function selectFrequency(value) {
-                // Remove selection from all
-                document.querySelectorAll('.frequency-btn').forEach(btn => btn.classList.remove('selected'));
-                // Add selection to clicked
-                event.currentTarget.classList.add('selected');
-                // Set hidden value
-                document.getElementById('hiddenFrequency').value = value;
-
-                // Auto advance to step 4 after a brief delay
-                setTimeout(() => {
-                    goToStep(4);
-                }, 300);
             }
 
             // Emotion Selection - Auto submit
@@ -611,11 +409,9 @@ if (isset($_SESSION['error_message'])) {
 
                 // Map emotion to status
                 const statusMap = {
-                    'very_frustrated': 'open',
                     'frustrated': 'open',
                     'annoyed': 'in_progress',
-                    'neutral': 'in_progress',
-                    'fine': 'closed'
+                    'neutral': 'in_progress'
                 };
                 document.getElementById('hiddenStatus').value = statusMap[value] || 'open';
 

@@ -125,7 +125,9 @@ if ($resLast && $resLast->num_rows > 0) {
 <body>
     <div class="container">
         <div class="user-info">
-            Xin chào <strong><?php echo htmlspecialchars($username); ?></strong> | <a href="logout.php">Đăng xuất</a>
+            Xin chào <strong><?php echo htmlspecialchars($username); ?></strong> | 
+            <a href="#" onclick="forceReload(); return false;" style="color: #60a5fa;">🔄 Làm mới</a> | 
+            <a href="logout.php">Đăng xuất</a>
         </div>
 
         <!-- Thông báo -->
@@ -475,6 +477,36 @@ if ($resLast && $resLast->num_rows > 0) {
                     closeWizard();
                 }
             });
+            // Hàm Force Refresh Clear Cache
+            async function forceReload() {
+                const btn = event.target;
+                btn.innerHTML = "🔄 Đang xử lý...";
+                
+                try {
+                    // 1. Unregister Service Workers
+                    if ('serviceWorker' in navigator) {
+                        const registrations = await navigator.serviceWorker.getRegistrations();
+                        for (let registration of registrations) {
+                            await registration.unregister();
+                        }
+                    }
+
+                    // 2. Xóa Cache Storage
+                    if ('caches' in window) {
+                        const cacheNames = await caches.keys();
+                        await Promise.all(
+                            cacheNames.map(name => caches.delete(name))
+                        );
+                    }
+
+                    console.log("Cache cleared!");
+                } catch (e) {
+                    console.error("Error clearing cache:", e);
+                }
+
+                // 3. Reload trang cực mạnh (bỏ qua cache trình duyệt)
+                window.location.href = window.location.pathname + '?t=' + new Date().getTime();
+            }
         </script>
 </body>
 

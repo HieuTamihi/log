@@ -1,14 +1,15 @@
-const CACHE_NAME = 'leverage-fluency-v2'; // Đã cập nhật lên v2 để clear cache cũ
+const CACHE_NAME = 'leverage-fluency-v3'; // Increased version to force update
 const urlsToCache = [
     '/',
     '/index.php',
-    '/style.css',
+    '/style.css?v=3', // Match the version in index.php
     '/login.php',
     '/register.php'
 ];
 
-// Install service worker
 self.addEventListener('install', event => {
+    // Force the waiting service worker to become the active service worker.
+    self.skipWaiting(); 
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
@@ -16,34 +17,8 @@ self.addEventListener('install', event => {
                 return cache.addAll(urlsToCache);
             })
     );
-    self.skipWaiting(); // Kích hoạt ngay lập tức
 });
 
-// NETWORK FIRST STRATEGY (Ưu tiên mạng, rớt mạng mới dùng cache)
-self.addEventListener('fetch', event => {
-    event.respondWith(
-        fetch(event.request)
-            .then(response => {
-                // 1. Tải thành công từ mạng -> Trả về dữ liệu này
-                
-                // (Tùy chọn) Lưu bản mới nhất vào cache để dành cho lần sau offline
-                if (response && response.status === 200 && response.type === 'basic') {
-                    const responseToCache = response.clone();
-                    caches.open(CACHE_NAME).then(cache => {
-                        cache.put(event.request, responseToCache);
-                    });
-                }
-                
-                return response;
-            })
-            .catch(() => {
-                // 2. Mất mạng hoặc lỗi server -> Lấy từ cache
-                return caches.match(event.request);
-            })
-    );
-});
-
-// Xóa cache cũ khi có version mới
 self.addEventListener('activate', event => {
     const cacheWhitelist = [CACHE_NAME];
     event.waitUntil(
@@ -57,5 +32,32 @@ self.addEventListener('activate', event => {
             );
         })
     );
+    // Tell the active service worker to take control of the page immediately.
     return self.clients.claim();
+});
+
+// NETWORK FIRST STRATEGY
+self.addEventListener('fetch', event => {
+    // Skip cross-origin requests
+    if (!event.request.url.startsWith(self.location.origin)) {
+        return;
+    }
+
+    event.respondWith(
+        fetch(event.request)
+            .then(response => {
+                // If valid response, clone and cache
+                if (response && response.status === 200 && response.type === 'basic') {
+                    const responseToCache = response.clone();
+                    caches.open(CACHE_NAME).then(cache => {
+                        cache.put(event.request, responseToCache);
+                    });
+                }
+                return response;
+            })
+            .catch(() => {
+                // Network failed, try cache
+                return caches.match(event.request);
+            })
+    );
 });

@@ -24,6 +24,21 @@ if (isset($_POST['login'])) {
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['username'] = $user['username'];
 
+                // Handle Remember Me
+                if (isset($_POST['remember'])) {
+                    // Generate secure random token
+                    $token = bin2hex(random_bytes(32));
+
+                    // Store in DB
+                    $updateStmt = $conn->prepare("UPDATE users SET remember_token = ? WHERE id = ?");
+                    $updateStmt->bind_param("si", $token, $user['id']);
+                    $updateStmt->execute();
+                    $updateStmt->close();
+
+                    // Set cookie for 30 days
+                    setcookie('remember_token', $token, time() + (86400 * 30), "/", "", false, true); // HTTPOnly
+                }
+
                 // Chuyển hướng về index
                 header("Location: index.php");
                 exit();  // Quan trọng: dừng script ngay sau header
@@ -78,6 +93,15 @@ if (isset($_POST['login'])) {
             <form method="POST">
                 <input type="text" name="username" placeholder="Tên đăng nhập" required autofocus>
                 <input type="password" name="password" placeholder="Mật khẩu" required>
+
+                <div style="display: flex; align-items: center; margin-bottom: 16px; justify-content: flex-start;">
+                    <input type="checkbox" name="remember" id="remember"
+                        style="width: auto; margin-right: 8px; margin-bottom: 0;">
+                    <label for="remember"
+                        style="margin-bottom: 0; cursor: pointer; color: var(--text-secondary); text-transform: none;">Ghi
+                        nhớ đăng nhập</label>
+                </div>
+
                 <button type="submit" name="login" class="btn auth-btn">Đăng Nhập</button>
             </form>
 

@@ -117,7 +117,7 @@ if (isset($_POST['edit_log'])) {
         // Add emotion info to content if provided
         $emotion = $_POST['emotion_level'] ?? '';
         if (!empty($emotion)) {
-             $emotionLabels = [
+            $emotionLabels = [
                 'frustrated' => 'Rất khó chịu',
                 'annoyed' => 'Hơi khó chịu',
                 'neutral' => 'Bình thường'
@@ -194,13 +194,13 @@ if ($resLast && $resLast->num_rows > 0) {
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
 
-    <link rel="stylesheet" href="style.css?v=2">
+    <link rel="stylesheet" href="style.css?v=3">
 
     <!-- Register Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js?v=2')
+                navigator.serviceWorker.register('sw.js?v=3')
                     .then(reg => console.log('Service Worker registered'))
                     .catch(err => console.log('Service Worker registration failed:', err));
             });
@@ -453,7 +453,8 @@ if ($resLast && $resLast->num_rows > 0) {
                     <input type="hidden" name="edit_log" value="1">
 
                     <div style="margin-bottom: 20px;">
-                        <label for="edit_log_content" style="display:block; margin-bottom:8px; font-weight:bold;">Mô tả</label>
+                        <label for="edit_log_content" style="display:block; margin-bottom:8px; font-weight:bold;">Mô
+                            tả</label>
                         <textarea name="log_content" id="edit_log_content" rows="6" class="big-textarea"
                             style="border: 1px solid var(--border-color); padding: 12px; border-radius: var(--radius); background: var(--input-bg);"></textarea>
                     </div>
@@ -461,16 +462,20 @@ if ($resLast && $resLast->num_rows > 0) {
                     <div style="margin-bottom: 20px;">
                         <label style="display:block; margin-bottom:8px; font-weight:bold;">Mức độ khó chịu?</label>
                         <input type="hidden" name="emotion_level" id="edit_emotion_level" value="">
-                        <div class="emotion-selector" id="editEmotionGroup" style="margin: 0; justify-content: flex-start; gap: 10px;">
-                            <div class="emotion-option" onclick="selectEditEmotion(this, 'frustrated')" id="edit_opt_frustrated" style="min-width: auto; padding: 10px;">
+                        <div class="emotion-selector" id="editEmotionGroup"
+                            style="margin: 0; justify-content: flex-start; gap: 10px;">
+                            <div class="emotion-option" onclick="selectEditEmotion(this, 'frustrated')"
+                                id="edit_opt_frustrated" style="min-width: auto; padding: 10px;">
                                 <span class="emotion-emoji" style="font-size: 24px;">😠</span>
                                 <span class="emotion-label">Rất khó chịu</span>
                             </div>
-                            <div class="emotion-option" onclick="selectEditEmotion(this, 'annoyed')" id="edit_opt_annoyed" style="min-width: auto; padding: 10px;">
+                            <div class="emotion-option" onclick="selectEditEmotion(this, 'annoyed')"
+                                id="edit_opt_annoyed" style="min-width: auto; padding: 10px;">
                                 <span class="emotion-emoji" style="font-size: 24px;">😕</span>
                                 <span class="emotion-label">Hơi khó chịu</span>
                             </div>
-                            <div class="emotion-option" onclick="selectEditEmotion(this, 'neutral')" id="edit_opt_neutral" style="min-width: auto; padding: 10px;">
+                            <div class="emotion-option" onclick="selectEditEmotion(this, 'neutral')"
+                                id="edit_opt_neutral" style="min-width: auto; padding: 10px;">
                                 <span class="emotion-emoji" style="font-size: 24px;">😐</span>
                                 <span class="emotion-label">Bình thường</span>
                             </div>
@@ -649,19 +654,19 @@ if ($resLast && $resLast->num_rows > 0) {
             // Edit Modal Functions
             function openEditModal(id, content) {
                 document.getElementById('edit_log_id').value = id;
-                
+
                 // Parse emotion from content
                 // Regex: Starts with [Label] ...
                 let cleanContent = content;
                 let foundEmotion = '';
-                
+
                 // Maps for labels
                 const labelToKey = {
                     'Rất khó chịu': 'frustrated',
                     'Hơi khó chịu': 'annoyed',
                     'Bình thường': 'neutral'
                 };
-                
+
                 // Simple regex to check for [Label] at start
                 const match = content.match(/^\[(.*?)\]\s/);
                 if (match && match[1]) {
@@ -671,15 +676,15 @@ if ($resLast && $resLast->num_rows > 0) {
                         // Remove the tag from content shown in textarea
                         cleanContent = content.substring(match[0].length);
                     } else if (label === 'frustrated' || label === 'annoyed' || label === 'neutral') {
-                         // Fallback if legacy data stored raw key
-                         foundEmotion = label; 
-                         cleanContent = content.substring(match[0].length);
+                        // Fallback if legacy data stored raw key
+                        foundEmotion = label;
+                        cleanContent = content.substring(match[0].length);
                     }
                 }
-                
+
                 document.getElementById('edit_log_content').value = cleanContent;
                 document.getElementById('edit_emotion_level').value = foundEmotion;
-                
+
                 // Update UI selection
                 document.querySelectorAll('#editEmotionGroup .emotion-option').forEach(el => el.classList.remove('selected'));
                 if (foundEmotion) {

@@ -58,6 +58,99 @@ if (isset($_POST['add_log'])) {
     exit();
 }
 
+// XỬ LÝ XÓA LOG
+if (isset($_POST['delete_log'])) {
+    $log_id = (int) $_POST['log_id'];
+    $user_id = (int) getCurrentUserId();
+
+    // Kiểm tra quyền (chính chủ) và chưa có solution
+    $stmtCheck = $conn->prepare("SELECT user_id FROM logs WHERE id = ?");
+    $stmtCheck->bind_param("i", $log_id);
+    $stmtCheck->execute();
+    $resCheck = $stmtCheck->get_result();
+    $log = $resCheck->fetch_assoc();
+    $stmtCheck->close();
+
+    if ($log && $log['user_id'] == $user_id) {
+        // Kiểm tra xem có solution không
+        $stmtSol = $conn->prepare("SELECT id FROM solutions WHERE log_id = ?");
+        $stmtSol->bind_param("i", $log_id);
+        $stmtSol->execute();
+        $stmtSol->store_result();
+
+        if ($stmtSol->num_rows > 0) {
+            $_SESSION['error_message'] = "Không thể xóa vấn đề đã có giải pháp!";
+        } else {
+            $stmtDel = $conn->prepare("DELETE FROM logs WHERE id = ?");
+            $stmtDel->bind_param("i", $log_id);
+            if ($stmtDel->execute()) {
+                $_SESSION['success_message'] = "Đã xóa vấn đề!";
+            } else {
+                $_SESSION['error_message'] = "Lỗi khi xóa: " . $conn->error;
+            }
+            $stmtDel->close();
+        }
+        $stmtSol->close();
+    } else {
+        $_SESSION['error_message'] = "Bạn không có quyền xóa vấn đề này!";
+    }
+    header("Location: index.php");
+    exit();
+}
+
+// XỬ LÝ SỬA LOG
+if (isset($_POST['edit_log'])) {
+    $log_id = (int) $_POST['log_id'];
+    // $name = trim($_POST['log_name']); // Removed from form
+    $content = trim($_POST['log_content']);
+    $user_id = (int) getCurrentUserId();
+
+    // Kiểm tra quyền (chính chủ)
+    $stmtCheck = $conn->prepare("SELECT user_id FROM logs WHERE id = ?");
+    $stmtCheck->bind_param("i", $log_id);
+    $stmtCheck->execute();
+    $resCheck = $stmtCheck->get_result();
+    $log = $resCheck->fetch_assoc();
+    $stmtCheck->close();
+
+    if ($log && $log['user_id'] == $user_id) {
+        // Add emotion info to content if provided
+        $emotion = $_POST['emotion_level'] ?? '';
+        if (!empty($emotion)) {
+             $emotionLabels = [
+                'frustrated' => 'Rất khó chịu',
+                'annoyed' => 'Hơi khó chịu',
+                'neutral' => 'Bình thường'
+            ];
+            $emotionLabel = $emotionLabels[$emotion] ?? $emotion;
+            $content = "[" . $emotionLabel . "] " . $content;
+        }
+
+        // Always regenerate name from content
+        if (strlen($content) > 0) {
+            $name = mb_substr(strip_tags($content), 0, 50);
+            if (mb_strlen(strip_tags($content)) > 50)
+                $name .= '...';
+        } else {
+            $name = 'Vấn đề mới';
+        }
+
+        $stmtUpd = $conn->prepare("UPDATE logs SET name = ?, content = ? WHERE id = ?");
+        $stmtUpd->bind_param("ssi", $name, $content, $log_id);
+
+        if ($stmtUpd->execute()) {
+            $_SESSION['success_message'] = "Đã cập nhật vấn đề!";
+        } else {
+            $_SESSION['error_message'] = "Lỗi khi cập nhật: " . $conn->error;
+        }
+        $stmtUpd->close();
+    } else {
+        $_SESSION['error_message'] = "Bạn không có quyền sửa vấn đề này!";
+    }
+    header("Location: index.php");
+    exit();
+}
+
 // === LẤY THÔNG TIN THỐNG KÊ (DASHBOARD) ===
 // 1. Tổng số Logged
 $resTotal = $conn->query("SELECT COUNT(*) as cnt FROM logs");
@@ -125,8 +218,8 @@ if ($resLast && $resLast->num_rows > 0) {
 <body>
     <div class="container">
         <div class="user-info">
-            Xin chào <strong><?php echo htmlspecialchars($username); ?></strong> | 
-            <a href="#" onclick="forceReload(); return false;" style="color: #60a5fa;">🔄 Làm mới</a> | 
+            Xin chào <strong><?php echo htmlspecialchars($username); ?></strong> |
+            <a href="#" onclick="forceReload(); return false;" style="color: #60a5fa;">🔄 Làm mới</a> |
             <a href="logout.php">Đăng xuất</a>
         </div>
 
@@ -213,6 +306,8 @@ if ($resLast && $resLast->num_rows > 0) {
             $total = $totalRes ? (int) $totalRes->fetch_assoc()['total'] : 0;
             $totalPages = max(1, (int) ceil($total / $perPage));
 
+            $currentUserId = getCurrentUserId(); // Define for templates
+            
             $query = "SELECT l.*, u.username AS creator, 
                          s.id AS sid, s.status AS s_status, s.user_id AS solution_creator_id,
                          su.username AS solution_creator
@@ -345,6 +440,49 @@ if ($resLast && $resLast->num_rows > 0) {
                 <h2>Nội Dung Chi Tiết Vấn Đề</h2>
                 <pre id="fullContentDisplay"
                     style="background:#f8f9fa; padding:20px; border-radius:8px; max-height:60vh; overflow-y:auto;"></pre>
+            </div>
+        </div>
+
+        <!-- Edit Log Modal -->
+        <div id="editLogModal" class="modal">
+            <div class="modal-content" style="max-width: 500px;">
+                <span class="close" onclick="closeEditModal()">&times;</span>
+                <h2>Chỉnh sửa vấn đề</h2>
+                <form method="POST" action="index.php">
+                    <input type="hidden" name="log_id" id="edit_log_id">
+                    <input type="hidden" name="edit_log" value="1">
+
+                    <div style="margin-bottom: 20px;">
+                        <label for="edit_log_content" style="display:block; margin-bottom:8px; font-weight:bold;">Mô tả</label>
+                        <textarea name="log_content" id="edit_log_content" rows="6" class="big-textarea"
+                            style="border: 1px solid var(--border-color); padding: 12px; border-radius: var(--radius); background: var(--input-bg);"></textarea>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display:block; margin-bottom:8px; font-weight:bold;">Mức độ khó chịu?</label>
+                        <input type="hidden" name="emotion_level" id="edit_emotion_level" value="">
+                        <div class="emotion-selector" id="editEmotionGroup" style="margin: 0; justify-content: flex-start; gap: 10px;">
+                            <div class="emotion-option" onclick="selectEditEmotion(this, 'frustrated')" id="edit_opt_frustrated" style="min-width: auto; padding: 10px;">
+                                <span class="emotion-emoji" style="font-size: 24px;">😠</span>
+                                <span class="emotion-label">Rất khó chịu</span>
+                            </div>
+                            <div class="emotion-option" onclick="selectEditEmotion(this, 'annoyed')" id="edit_opt_annoyed" style="min-width: auto; padding: 10px;">
+                                <span class="emotion-emoji" style="font-size: 24px;">😕</span>
+                                <span class="emotion-label">Hơi khó chịu</span>
+                            </div>
+                            <div class="emotion-option" onclick="selectEditEmotion(this, 'neutral')" id="edit_opt_neutral" style="min-width: auto; padding: 10px;">
+                                <span class="emotion-emoji" style="font-size: 24px;">😐</span>
+                                <span class="emotion-label">Bình thường</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="text-align: right;">
+                        <button type="button" class="btn btn-secondary" onclick="closeEditModal()"
+                            style="margin-right: 10px;">Hủy</button>
+                        <button type="submit" class="btn">Lưu thay đổi</button>
+                    </div>
+                </form>
             </div>
         </div>
 
@@ -481,7 +619,7 @@ if ($resLast && $resLast->num_rows > 0) {
             async function forceReload() {
                 const btn = event.target;
                 btn.innerHTML = "🔄 Đang xử lý...";
-                
+
                 try {
                     // 1. Unregister Service Workers
                     if ('serviceWorker' in navigator) {
@@ -507,6 +645,71 @@ if ($resLast && $resLast->num_rows > 0) {
                 // 3. Reload trang cực mạnh (bỏ qua cache trình duyệt)
                 window.location.href = window.location.pathname + '?t=' + new Date().getTime();
             }
+
+            // Edit Modal Functions
+            function openEditModal(id, content) {
+                document.getElementById('edit_log_id').value = id;
+                
+                // Parse emotion from content
+                // Regex: Starts with [Label] ...
+                let cleanContent = content;
+                let foundEmotion = '';
+                
+                // Maps for labels
+                const labelToKey = {
+                    'Rất khó chịu': 'frustrated',
+                    'Hơi khó chịu': 'annoyed',
+                    'Bình thường': 'neutral'
+                };
+                
+                // Simple regex to check for [Label] at start
+                const match = content.match(/^\[(.*?)\]\s/);
+                if (match && match[1]) {
+                    const label = match[1];
+                    if (labelToKey[label]) {
+                        foundEmotion = labelToKey[label];
+                        // Remove the tag from content shown in textarea
+                        cleanContent = content.substring(match[0].length);
+                    } else if (label === 'frustrated' || label === 'annoyed' || label === 'neutral') {
+                         // Fallback if legacy data stored raw key
+                         foundEmotion = label; 
+                         cleanContent = content.substring(match[0].length);
+                    }
+                }
+                
+                document.getElementById('edit_log_content').value = cleanContent;
+                document.getElementById('edit_emotion_level').value = foundEmotion;
+                
+                // Update UI selection
+                document.querySelectorAll('#editEmotionGroup .emotion-option').forEach(el => el.classList.remove('selected'));
+                if (foundEmotion) {
+                    const el = document.getElementById('edit_opt_' + foundEmotion);
+                    if (el) el.classList.add('selected');
+                }
+
+                document.getElementById('editLogModal').style.display = 'block';
+            }
+
+            function selectEditEmotion(el, value) {
+                // Remove selected from siblings
+                document.querySelectorAll('#editEmotionGroup .emotion-option').forEach(opt => opt.classList.remove('selected'));
+                // Select current
+                el.classList.add('selected');
+                // Set hidden input
+                document.getElementById('edit_emotion_level').value = value;
+            }
+
+            function closeEditModal() {
+                document.getElementById('editLogModal').style.display = 'none';
+            }
+
+            // Close edit modal when clicking outside
+            window.addEventListener('click', function (event) {
+                const editModal = document.getElementById('editLogModal');
+                if (event.target == editModal) {
+                    editModal.style.display = 'none';
+                }
+            });
         </script>
 </body>
 

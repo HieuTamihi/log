@@ -1057,6 +1057,15 @@ tr:hover td {
         font-size: 14px;
     }
 
+    .btn.btn-icon {
+        padding: 0;
+        width: 40px;
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
     /* Inputs */
     input[type="text"],
     input[type="password"],

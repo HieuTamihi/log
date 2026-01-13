@@ -157,16 +157,15 @@ function formatTimeAgo($datetime)
 
 <!DOCTYPE html>
 <html lang="vi">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản Lý Log & Solution</title>
     <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
     <div class="container">
+        <!-- User Info -->
         <div class="user-info">
             Xin chào <strong><?= htmlspecialchars($username) ?></strong> | <a href="logout.php">Đăng xuất</a>
         </div>
@@ -453,5 +452,4 @@ function formatTimeAgo($datetime)
         }
     </script>
 </body>
-
 </html>

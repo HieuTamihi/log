@@ -1,5 +1,8 @@
 <?php
 include 'db.php';  // Đảm bảo file db.php có session_start();
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
 if (isset($_POST['login'])) {
     $username = trim($_POST['username']);
@@ -26,17 +29,30 @@ if (isset($_POST['login'])) {
 
                 // Handle Remember Me
                 if (isset($_POST['remember'])) {
-                    // Generate secure random token
-                    $token = bin2hex(random_bytes(32));
-
-                    // Store in DB
-                    $updateStmt = $conn->prepare("UPDATE users SET remember_token = ? WHERE id = ?");
-                    $updateStmt->bind_param("si", $token, $user['id']);
-                    $updateStmt->execute();
-                    $updateStmt->close();
-
-                    // Set cookie for 30 days
-                    setcookie('remember_token', $token, time() + (86400 * 30), "/", "", false, true); // HTTPOnly
+                    if (!function_exists('random_bytes')) {
+                        die("Error: random_bytes function not available. PHP 7.0+ required.");
+                    }
+                    try {
+                        // Generate secure random token
+                        $token = bin2hex(random_bytes(32)); 
+                        
+                        // Store in DB
+                        $updateStmt = $conn->prepare("UPDATE users SET remember_token = ? WHERE id = ?");
+                        if (!$updateStmt) {
+                            die("Prepare failed: (" . $conn->errno . ") " . $conn->error);
+                        }
+                        
+                        $updateStmt->bind_param("si", $token, $user['id']);
+                        if (!$updateStmt->execute()) {
+                             die("Execute failed: (" . $updateStmt->errno . ") " . $updateStmt->error);
+                        }
+                        $updateStmt->close();
+    
+                        // Set cookie for 30 days
+                        setcookie('remember_token', $token, time() + (86400 * 30), "/", "", false, true); // HTTPOnly
+                    } catch (Exception $e) {
+                         die("Exception: " . $e->getMessage());
+                    }
                 }
 
                 // Chuyển hướng về index

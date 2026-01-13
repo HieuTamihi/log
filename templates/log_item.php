@@ -1,3 +1,9 @@
+<?php
+// templates/log_item.php
+$status_text = $row['status'] == 'open' ? 'Mở' : ($row['status'] == 'in_progress' ? 'Đang xử lý' : 'Đã đóng');
+$solution_text = $row['sid'] ? "<a href='solution_detail.php?id={$row['sid']}'>Xem Solution</a>" : "<a href='add_solution.php?log_id={$row['id']}'>Tạo Solution</a>";
+$short_content = mb_strlen($row['content'], 'UTF-8') > 100 ? mb_substr($row['content'], 0, 100, 'UTF-8') . '...' : $row['content'];
+?>
 <div class="card" style="margin-bottom: 20px;">
     <strong><?php echo htmlspecialchars($row['name']); ?></strong>
     <small style="color: var(--text-secondary);">(bởi <?php echo htmlspecialchars($creator ?? 'Không rõ'); ?>)</small>
@@ -5,17 +11,16 @@
     <?php $has_solution = !empty($row['sid']); ?>
 
     <?php
-    $full = $row['content'] ?? '';
-    $short = mb_strlen($full, 'UTF-8') > 200 ? mb_substr($full, 0, 200, 'UTF-8') . '...' : $full;
+    $short = mb_strlen($row['content'] ?? '', 'UTF-8') > 200 ? mb_substr($row['content'] ?? '', 0, 200, 'UTF-8') . '...' : $row['content'] ?? '';
     ?>
 
-    <p class="content-preview" data-full="<?php echo htmlspecialchars($full, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>"
+    <p class="content-preview" data-log-id="<?php echo (int)$row['id']; ?>"
         style="cursor:pointer; color: var(--text-secondary);">
         <?php echo nl2br(htmlspecialchars($short)); ?>
     </p>
 
     <small style="color: var(--text-secondary);">Trạng thái: <span
-            style="color: var(--text-primary);"><?php echo $row['status'] == 'open' ? 'Mở' : ($row['status'] == 'in_progress' ? 'Đang xử lý' : 'Đã đóng'); ?></span></small><br><br>
+            style="color: var(--text-primary);"><?php echo $status_text; ?></span></small><br><br>
 
     <?php if ($has_solution): ?>
         <a href="solution_detail.php?id=<?php echo $row['sid']; ?>" class="btn">Xem Solution</a>

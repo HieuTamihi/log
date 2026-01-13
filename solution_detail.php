@@ -68,20 +68,24 @@ if (!$row) {
 
         <?php if (isset($_SESSION['success_message'])): ?>
             <div class="alert success"><?php echo $_SESSION['success_message'];
-            unset($_SESSION['success_message']); ?>
+                                        unset($_SESSION['success_message']); ?>
             </div>
         <?php endif; ?>
         <?php if (isset($_SESSION['msg'])): ?>
             <div class="alert success"><?php echo $_SESSION['msg'];
-            unset($_SESSION['msg']); ?></div>
+                                        unset($_SESSION['msg']); ?></div>
         <?php endif; ?>
 
         <div class="card" style="margin-bottom: 24px;">
             <h2>Vấn Đề</h2>
-            <pre><?php echo htmlspecialchars($row['log_content']); ?></pre>
+            <div class="code-block">
+                <?php echo htmlspecialchars($row['log_content']); ?>
+            </div>
 
             <h2>Giải Pháp Hiện Tại</h2>
-            <pre><?php echo htmlspecialchars($row['content']); ?></pre>
+            <div class="code-block">
+                <?php echo htmlspecialchars($row['content']); ?>
+            </div>
 
             <!-- Nút mở Modal Cập Nhật -->
             <div style="text-align: center; margin-top: 30px;">
@@ -149,12 +153,12 @@ if (!$row) {
                 <label>Trạng thái:</label>
                 <select name="status">
                     <option value="draft" <?php if ($row['status'] == 'draft')
-                        echo 'selected'; ?>>Bản nháp</option>
+                                                echo 'selected'; ?>>Bản nháp</option>
                     <option value="testing" <?php if ($row['status'] == 'testing')
-                        echo 'selected'; ?>>Đang kiểm tra
+                                                echo 'selected'; ?>>Đang kiểm tra
                     </option>
                     <option value="done" <?php if ($row['status'] == 'done')
-                        echo 'selected'; ?>>Hoàn thành</option>
+                                                echo 'selected'; ?>>Hoàn thành</option>
                 </select>
 
                 <div style="margin-top: 20px;">
@@ -171,12 +175,26 @@ if (!$row) {
         const closeBtn = modal ? modal.querySelector('.close') : null;
         const cancelBtn = document.getElementById("cancelUpdate");
 
-        openBtn && openBtn.addEventListener('click', () => modal.style.display = 'block');
-        closeBtn && closeBtn.addEventListener('click', () => modal.style.display = 'none');
-        cancelBtn && cancelBtn.addEventListener('click', () => modal.style.display = 'none');
+        openBtn && openBtn.addEventListener('click', () => {
+            modal.style.display = 'block';
+            setTimeout(() => modal.classList.add('show'), 10); // Delay cho mượt
+        });
+
+        closeBtn && closeBtn.addEventListener('click', () => {
+            modal.classList.remove('show');
+            setTimeout(() => modal.style.display = 'none', 300);
+        });
+
+        cancelBtn && cancelBtn.addEventListener('click', () => {
+            modal.classList.remove('show');
+            setTimeout(() => modal.style.display = 'none', 300);
+        });
 
         window.addEventListener('click', (event) => {
-            if (event.target === modal) modal.style.display = 'none';
+            if (event.target === modal) {
+                modal.classList.remove('show');
+                setTimeout(() => modal.style.display = 'none', 300);
+            }
         });
     </script>
 </body>

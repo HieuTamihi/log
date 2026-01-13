@@ -1,61 +1,160 @@
 <?php
 include 'db.php';
-requireLogin();  // Nếu bạn đã có hàm này
+requireLogin();
 
-// Hiển thị tên người dùng (đã đăng nhập)
+// Tên người dùng
 $username = $_SESSION['username'] ?? 'Người dùng';
 
-// XỬ LÝ THÊM LOG - SỬ DỤNG PRG ĐỂ TRÁNH RESUBMIT
+// Xử lý thêm log mới
 if (isset($_POST['add_log'])) {
-    $name = trim($_POST['log_name']);
-    $content = trim($_POST['log_content']);
-    $version = $_POST['log_version'] ?: '1.0';
-    $status = $_POST['log_status'] ?? 'open';
-    $user_id = (int) getCurrentUserId();  // Nếu có hệ thống đăng nhập
+    $user_id = (int) getCurrentUserId();
+    $repeat  = $_POST['repeat'] ?? null;
 
-    if (!empty($name) && !empty($content)) {
-        $stmt = $conn->prepare("INSERT INTO logs (name, content, version, status, user_id) VALUES (?, ?, ?, ?, ?)");
-        $stmt->bind_param("ssssi", $name, $content, $version, $status, $user_id);
+    // Khởi tạo các biến mặc định
+    $name      = trim($_POST['log_name'] ?? '');
+    $content   = trim($_POST['log_content'] ?? '');
+    $version   = '1.0';
+    $status    = 'open';
+    $frequency = $_POST['frequency'] ?? 'daily';
+    $emotion   = $_POST['emotion'] ?? 'binh-thuong';
+
+    // TRƯỜNG HỢP: Giống lần trước -> Lấy dữ liệu từ bản ghi gần nhất
+    if ($repeat === 'same') {
+        $lastStmt = $conn->prepare("
+            SELECT name, content, version, status, frequency, emotion 
+            FROM logs 
+            WHERE user_id = ? 
+            ORDER BY id DESC 
+            LIMIT 1
+        ");
+        $lastStmt->bind_param("i", $user_id);
+        $lastStmt->execute();
+        $lastLog = $lastStmt->get_result()->fetch_assoc();
+        $lastStmt->close();
+
+        if ($lastLog) {
+            // Ghi đè dữ liệu cũ vào các biến để chuẩn bị Insert bản ghi mới
+            $name      = $lastLog['name'];
+            $content   = $lastLog['content'];
+            $version   = $lastLog['version'];
+            $status    = $lastLog['status'];
+            $frequency = $lastLog['frequency'];
+            $emotion   = $lastLog['emotion'];
+
+            // Cập nhật số lần lặp lại cho bản ghi GỐC (Tùy chọn)
+            // $conn->query("UPDATE logs SET repeat_count = repeat_count + 1 WHERE user_id = $user_id ORDER BY id DESC LIMIT 1");
+        } else {
+            $_SESSION['error_message'] = "Bạn chưa có vấn đề nào trước đó để sao chép!";
+            header("Location: index.php");
+            exit();
+        }
+    }
+
+    // Thực hiện INSERT bản ghi mới (Dù là tạo mới hoàn toàn hay Copy từ cái cũ)
+    if ($name && $content) {
+        $stmt = $conn->prepare("
+            INSERT INTO logs 
+            (name, content, version, status, user_id, repeat_status, frequency, emotion, repeat_count) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
+        ");
+        // repeat_count mặc định là 1 cho bản ghi mới này
+        $stmt->bind_param("ssssisss", $name, $content, $version, $status, $user_id, $repeat, $frequency, $emotion);
 
         if ($stmt->execute()) {
-            $_SESSION['success_message'] = "Thêm vấn đề thành công!";
+            $_SESSION['success_message'] = ($repeat === 'same') ? "Đã ghi nhận lặp lại vấn đề trước đó!" : "Thêm vấn đề thành công!";
         } else {
-            $_SESSION['error_message'] = "Lỗi khi thêm: " . $stmt->error;
+            $_SESSION['error_message'] = "Lỗi hệ thống: " . $stmt->error;
         }
         $stmt->close();
     } else {
-        $_SESSION['error_message'] = "Vui lòng nhập đầy đủ tên và nội dung!";
+        $_SESSION['error_message'] = "Vui lòng nhập đầy đủ thông tin!";
     }
 
-    // QUAN TRỌNG: Redirect để tránh resubmit
     header("Location: index.php");
     exit();
 }
 
-// === LẤY THÔNG TIN THỐNG KÊ (DASHBOARD) ===
-// 1. Tổng số Logged
-$resTotal = $conn->query("SELECT COUNT(*) as cnt FROM logs");
-$countLogged = $resTotal ? $resTotal->fetch_assoc()['cnt'] : 0;
+// Thống kê
+$countLogged     = $conn->query("SELECT COUNT(*) as cnt FROM logs")->fetch_assoc()['cnt'] ?? 0;
+$countInProgress = $conn->query("SELECT COUNT(*) as cnt FROM logs WHERE status = 'in_progress'")->fetch_assoc()['cnt'] ?? 0;
+$countNeedAction = $conn->query("SELECT COUNT(*) as cnt FROM logs WHERE status = 'open'")->fetch_assoc()['cnt'] ?? 0;
 
-// 2. Số Recurring (Giả sử là status = 'in_progress' hoặc có logic khác)
-$resProg = $conn->query("SELECT COUNT(*) as cnt FROM logs WHERE status = 'in_progress'");
-$countInProgress = $resProg ? $resProg->fetch_assoc()['cnt'] : 0;
+// Lấy danh sách logs (phân trang)
+$page     = max(1, (int)($_GET['page'] ?? 1));
+$perPage  = 20;
+$offset   = ($page - 1) * $perPage;
+$total    = $conn->query("SELECT COUNT(*) AS total FROM logs")->fetch_assoc()['total'] ?? 0;
+$totalPages = max(1, (int)ceil($total / $perPage));
 
-// 3. Need Action (status = 'open')
-$resOpen = $conn->query("SELECT COUNT(*) as cnt FROM logs WHERE status = 'open'");
-$countNeedAction = $resOpen ? $resOpen->fetch_assoc()['cnt'] : 0;
+$query = "SELECT l.*, u.username AS creator, 
+                 s.id AS sid, s.status AS s_status, s.user_id AS solution_creator_id,
+                 su.username AS solution_creator
+          FROM logs l 
+          LEFT JOIN users u ON l.user_id = u.id 
+          LEFT JOIN solutions s ON l.id = s.log_id 
+          LEFT JOIN users su ON s.user_id = su.id 
+          ORDER BY l.id DESC LIMIT $offset, $perPage";
 
-
-// Hiển thị thông báo (nếu có) sau redirect
-if (isset($_SESSION['success_message'])) {
-    echo '<div class="alert success">' . $_SESSION['success_message'] . '</div>';
-    unset($_SESSION['success_message']);
+$result = $conn->query($query);
+$logs = [];
+while ($row = $result->fetch_assoc()) {
+    $logs[] = $row;
 }
-if (isset($_SESSION['error_message'])) {
-    echo '<div class="alert error">' . $_SESSION['error_message'] . '</div>';
+
+// Xuất biến JS chứa nội dung đầy đủ
+echo '<script id="log-contents">';
+echo 'const logContents = {';
+foreach ($logs as $row) {
+    $id = (int)$row['id'];
+    $content = json_encode($row['content'] ?? '', JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    echo "$id: $content,";
+}
+echo '};';
+echo '</script>';
+
+// Thông báo
+$alert = '';
+if (isset($_SESSION['success_message'])) {
+    $alert = '<div class="alert success">' . $_SESSION['success_message'] . '</div>';
+    unset($_SESSION['success_message']);
+} elseif (isset($_SESSION['error_message'])) {
+    $alert = '<div class="alert error">' . $_SESSION['error_message'] . '</div>';
     unset($_SESSION['error_message']);
 }
+function formatTimeAgo($datetime)
+{
+    if (!$datetime) return "không rõ";
+
+    $time = strtotime($datetime);
+    $now = time();
+    $diff = $now - $time;
+
+    // Nếu thời gian ở tương lai hoặc mới tạo dưới 30 giây thì hiện "vừa xong"
+    if ($diff < 30) {
+        return 'vừa xong';
+    }
+
+    $intervals = [
+        31536000 => 'năm',
+        2592000  => 'tháng',
+        604800   => 'tuần',
+        86400    => 'ngày',
+        3600     => 'giờ',
+        60       => 'phút'
+    ];
+
+    foreach ($intervals as $secs => $label) {
+        $div = $diff / $secs;
+        if ($div >= 1) {
+            $t = floor($div); // Dùng floor để không bị làm tròn lên (vd 59 giây không thành 1 phút)
+            return $t . ' ' . $label . ' trước';
+        }
+    }
+
+    return floor($diff) . ' giây trước';
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="vi">
 
@@ -64,331 +163,295 @@ if (isset($_SESSION['error_message'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản Lý Log & Solution</title>
     <link rel="stylesheet" href="style.css">
-    <script>
-        function openTab(evt, tabName) {
-            document.querySelectorAll(".tabcontent").forEach(t => t.style.display = "none");
-            document.querySelectorAll(".tablink").forEach(t => t.classList.remove("active"));
-            document.getElementById(tabName).style.display = "block";
-            evt.currentTarget.classList.add("active");
-        }
-    </script>
 </head>
 
 <body>
     <div class="container">
         <div class="user-info">
-            Xin chào <strong><?php echo htmlspecialchars($username); ?></strong> | <a href="logout.php">Đăng xuất</a>
+            Xin chào <strong><?= htmlspecialchars($username) ?></strong> | <a href="logout.php">Đăng xuất</a>
         </div>
 
-        <!-- Stats Dashboard -->
-        <!-- Stats Dashboard -->
-        <!-- Variables $countLogged, $countInProgress, $countNeedAction are fetched at top of file -->
+        <?= $alert ?>
 
+        <!-- Stats -->
         <div class="stats-grid">
             <div class="stat-card">
-                <span class="stat-number"><?php echo $countLogged; ?></span>
+                <span class="stat-number"><?= $countLogged ?></span>
                 <span class="stat-label">Logged</span>
             </div>
             <div class="stat-card">
-                <span class="stat-number warning"><?php echo $countInProgress; ?></span>
-                <span class="stat-label">Recurring</span>
+                <span class="stat-number warning"><?= $countInProgress ?></span>
+                <span class="stat-label">Đang xử lý</span>
             </div>
             <div class="stat-card">
-                <span class="stat-number danger"><?php echo $countNeedAction; ?></span>
-                <span class="stat-label">Need Action</span>
+                <span class="stat-number danger"><?= $countNeedAction ?></span>
+                <span class="stat-label">Cần xử lý</span>
             </div>
         </div>
 
-        <!-- Main Center Action -->
+        <!-- Nút thêm -->
         <div class="center-action-container">
-            <button onclick="openWizard()" class="hero-btn">
-                Thêm vấn đề mới
-            </button>
-            <p style="margin-top: 15px; color: var(--text-secondary); font-size: 14px;">Bấm để ghi lại vấn đề bạn đang
-                gặp phải</p>
+            <button onclick="openWizard()" class="hero-btn">Thêm vấn đề mới</button>
+            <p>Bấm để ghi lại vấn đề bạn đang gặp phải</p>
         </div>
 
-        <!-- Bottom Sheet Toggle -->
+        <!-- Toggle danh sách -->
         <div class="bottom-sheet-toggle" id="toggleListBtn">
-            <span id="toggleIcon">☰</span> Xem danh sách vấn đề (<?php echo $countLogged; ?>)
+            <span id="toggleIcon">☰</span> Xem danh sách vấn đề (<?= $countLogged ?>)
         </div>
 
-        <!-- Hidden Logs List -->
-        <div id="logsListContainer">
-            <!-- Close Button to go back to Dashboard -->
-            <button class="close-list-btn" onclick="closeLogsList()" title="Quay lại trang chủ">✕</button>
-
-            <!-- Slider Tabs -->
-            <div class="tabs">
-                <button class="tablink active" onclick="openTab(event,'all')">Tất cả Logs</button>
-                <button class="tablink" onclick="openTab(event,'pending')">Chưa Giải Quyết</button>
-                <button class="tablink" onclick="openTab(event,'inprogress')">Solution Đang Làm</button>
-                <button class="tablink" onclick="openTab(event,'done')">Solution Hoàn Thành</button>
+        <!-- Danh sách vấn đề -->
+        <div id="logsListContainer" class="logs-modal">
+            <div class="logs-header">
+                <h2>Các Vấn Đề Lặp Lại</h2>
+                <button class="close-list-btn" title="Đóng">Đóng</button>
             </div>
 
-            <?php
-            // Lấy dữ liệu có phân trang (tránh load quá nhiều dòng cùng lúc)
-            $logs = [];
-            $page = max(1, (int) ($_GET['page'] ?? 1));
-            $perPage = 20;
-            $offset = ($page - 1) * $perPage;
-
-            // Tổng số bản ghi để hiển thị paging
-            $totalRes = $conn->query("SELECT COUNT(*) AS total FROM logs");
-            $total = $totalRes ? (int) $totalRes->fetch_assoc()['total'] : 0;
-            $totalPages = max(1, (int) ceil($total / $perPage));
-
-            $query = "SELECT l.*, u.username AS creator, 
-                         s.id AS sid, s.status AS s_status, s.user_id AS solution_creator_id,
-                         su.username AS solution_creator
-                  FROM logs l 
-                  LEFT JOIN users u ON l.user_id = u.id 
-                  LEFT JOIN solutions s ON l.id = s.log_id 
-                  LEFT JOIN users su ON s.user_id = su.id 
-                  ORDER BY l.id DESC
-                  LIMIT $offset, $perPage";
-            $result = $conn->query($query);
-            while ($row = $result->fetch_assoc()) {
-                $logs[] = $row;
-            }
-            ?>
-
-            <!-- Tab Tất cả Logs -->
-            <div id="all" class="tabcontent">
+            <div class="logs-list">
                 <?php foreach ($logs as $row):
-                    $creator = $row['creator'] ?? 'Không rõ';
-                    ?>
-                    <?php include 'templates/log_item.php'; ?>
+                    $status_class = $row['status'] === 'open' ? 'new' : ($row['status'] === 'in_progress' ? 'in-progress' : 'done');
+                    $status_text  = $row['status'] === 'open' ? 'Mới' : ($row['status'] === 'in_progress' ? 'Đang xử lý' : 'Hoàn thành');
+
+                    $short_name = mb_strlen($row['name']) > 60 ? mb_substr($row['name'], 0, 57, 'UTF-8') . '...' : $row['name'];
+
+                    $freq_raw = $row['frequency'] ?? 'daily';
+                    $frequency_text = match ($freq_raw) {
+                        'daily' => 'Hàng ngày',
+                        'weekly' => 'Hàng tuần',
+                        'monthly' => 'Hàng tháng',
+                        'rare' => 'Hiếm khi',
+                        default => 'Hàng ngày'
+                    };
+
+                    $db_time = !empty($row['updated_at']) ? $row['updated_at'] : $row['created_at'];
+                    $time_ago = formatTimeAgo($db_time);
+                    $repeat_count = $row['repeat_count'] ?? 1;
+                    $has_solution = !empty($row['sid']);
+                ?>
+                    <div class="log-card">
+                        <div class="log-left">
+                            <div class="log-status-tag <?= $status_class ?>"><?= $status_text ?></div>
+                            <a href="log_detail.php?id=<?= (int)$row['id'] ?>" class="log-title">
+                                <?= htmlspecialchars($short_name) ?>
+                            </a>
+                            <div class="log-meta">
+                                <span class="log-frequency"><?= $repeat_count ?>× <?= $frequency_text ?></span>
+                                <!-- Hiển thị thời gian đã được format chuẩn -->
+                                <span class="log-time"><?= $time_ago ?></span>
+                            </div>
+                        </div>
+                        <div class="log-actions">
+                            <?php if ($has_solution): ?>
+                                <a href="solution_detail.php?id=<?= (int)$row['sid'] ?>" class="btn btn-small">Xem Giải Pháp</a>
+                            <?php else: ?>
+                                <a href="add_solution.php?log_id=<?= (int)$row['id'] ?>" class="btn btn-small btn-primary">Tạo Giải Pháp</a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
                 <?php endforeach; ?>
-            </div>
 
-            <!-- Tab Đang Giải Quyết (chưa có solution) -->
-            <div id="pending" class="tabcontent">
-                <?php foreach ($logs as $row):
-                    if ($row['sid'] === null):
-                        $creator = $row['creator'] ?? 'Không rõ';
-                        ?>
-                        <?php include 'templates/log_item.php'; ?>
-                    <?php endif;
-                endforeach; ?>
-            </div>
-
-            <!-- Tab Solution Đang Làm -->
-            <div id="inprogress" class="tabcontent">
-                <?php foreach ($logs as $row):
-                    if ($row['sid'] !== null && $row['s_status'] !== 'done'):
-                        $creator = $row['creator'] ?? 'Không rõ';
-                        ?>
-                        <?php include 'templates/log_item.php'; ?>
-                    <?php endif;
-                endforeach; ?>
-            </div>
-
-            <!-- Tab Solution Hoàn Thành -->
-            <div id="done" class="tabcontent">
-                <?php foreach ($logs as $row):
-                    if ($row['sid'] !== null && $row['s_status'] === 'done'):
-                        $creator = $row['creator'] ?? 'Không rõ';
-                        ?>
-                        <?php include 'templates/log_item.php'; ?>
-                    <?php endif;
-                endforeach; ?>
-            </div>
-
-            <!-- Pagination -->
-            <div style="text-align:center; margin:20px 0;">
-                <?php if ($page > 1): ?>
-                    <a href="index.php?page=<?php echo $page - 1; ?>" class="btn btn-secondary">&lsaquo; Trang trước</a>
+                <?php if (empty($logs)): ?>
+                    <div class="empty-state">Hiện chưa có vấn đề nào được ghi nhận.</div>
                 <?php endif; ?>
-                <?php if ($page < $totalPages): ?>
-                    <a href="index.php?page=<?php echo $page + 1; ?>" class="btn">Trang sau &rsaquo;</a>
-                <?php endif; ?>
-            </div><!-- End Pagination -->
-        </div><!-- End #logsListContainer -->
+            </div>
+        </div>
 
-        <!-- Wizard Overlay Thêm Log (OUTSIDE logsListContainer) -->
+        <!-- Wizard thêm log -->
         <div id="addLogWizard" class="wizard-overlay">
             <div class="wizard-container">
                 <form method="POST" id="wizardForm">
-                    <!-- Step 1: Nhập liệu cơ bản -->
+                    <!-- Bước 1: Có lặp lại không? -->
                     <div class="wizard-step active" id="step1">
-                        <input type="text" name="log_name" class="big-input" placeholder="Tên vấn đề..." required
-                            autofocus>
-                        <textarea name="log_content" class="big-textarea p-2"
-                            placeholder="Mô tả chi tiết vấn đề đang gặp phải..." required></textarea>
-
+                        <h2>Vấn đề này có lặp lại không?</h2>
+                        <div class="chip-group">
+                            <label class="chip-option" onclick="selectChip(this)">
+                                <input type="radio" name="repeat" value="same"> Giống lần trước
+                            </label>
+                            <label class="chip-option" onclick="selectChip(this)">
+                                <input type="radio" name="repeat" value="yes"> Có
+                            </label>
+                            <label class="chip-option" onclick="selectChip(this)">
+                                <input type="radio" name="repeat" value="no"> Không
+                            </label>
+                        </div>
                         <div class="wizard-actions">
-                            <span class="wizard-back" onclick="closeWizard()">Hủy bỏ</span>
-                            <button type="button" class="btn" onclick="nextStep()">Tiếp tục</button>
+                            <span class="wizard-back" onclick="closeWizard()">Hủy</span>
+                            <button type="button" class="btn" onclick="handleNext()">Tiếp tục</button>
                         </div>
                     </div>
 
-                    <!-- Step 2: Phân loại & Xác nhận -->
+                    <!-- Bước 2: Tần suất xảy ra -->
                     <div class="wizard-step" id="step2">
-                        <h2 style="margin-bottom: 30px;">Chi tiết bổ sung</h2>
-
-                        <label style="margin-bottom: 15px;">Trạng thái khởi tạo</label>
-                        <div class="chip-group" id="statusGroup">
-                            <label class="chip-option selected" onclick="selectChip(this)">
-                                <input type="radio" name="log_status" value="open" checked class="chip-radio"> Mở
+                        <h2>Vấn đề xảy ra bao lâu một lần?</h2>
+                        <div class="chip-group">
+                            <label class="chip-option" onclick="selectChip(this)">
+                                <input type="radio" name="frequency" value="daily"> Hàng ngày
                             </label>
                             <label class="chip-option" onclick="selectChip(this)">
-                                <input type="radio" name="log_status" value="in_progress" class="chip-radio"> Đang
-                                xử lý
+                                <input type="radio" name="frequency" value="weekly"> Hàng tuần
                             </label>
                             <label class="chip-option" onclick="selectChip(this)">
-                                <input type="radio" name="log_status" value="closed" class="chip-radio"> Đã đóng
+                                <input type="radio" name="frequency" value="monthly"> Hàng tháng
+                            </label>
+                            <label class="chip-option" onclick="selectChip(this)">
+                                <input type="radio" name="frequency" value="rare"> Hiếm khi
                             </label>
                         </div>
-
-                        <label>Phiên bản (Tùy chọn)</label>
-                        <input type="text" name="log_version" value="1.0" class="input-field"
-                            style="background:transparent; border:1px solid #374151; padding: 12px; color:white; border-radius:12px; margin-bottom: 30px; width: 100px;">
-
                         <div class="wizard-actions">
-                            <span class="wizard-back" onclick="prevStep()">Quay lại</span>
-                            <button type="submit" name="add_log" class="btn">Hoàn thành Log</button>
+                            <span class="wizard-back" onclick="prevStep(1)">Quay lại</span>
+                            <button type="button" class="btn" onclick="nextStep(3)">Tiếp tục</button>
+                        </div>
+                    </div>
+
+                    <!-- Bước 3: Mức độ cảm xúc -->
+                    <div class="wizard-step" id="step3">
+                        <h2>Khi vấn đề lặp lại, bạn cảm thấy thế nào?</h2>
+                        <div class="chip-group emotion-chips">
+                            <label class="chip-option" onclick="selectChip(this)">
+                                <input type="radio" name="emotion" value="rat-tot"> Rất tốt
+                            </label>
+                            <label class="chip-option" onclick="selectChip(this)">
+                                <input type="radio" name="emotion" value="tot"> Tốt
+                            </label>
+                            <label class="chip-option" onclick="selectChip(this)">
+                                <input type="radio" name="emotion" value="binh-thuong"> Bình thường
+                            </label>
+                            <label class="chip-option" onclick="selectChip(this)">
+                                <input type="radio" name="emotion" value="tuc"> Tức
+                            </label>
+                            <label class="chip-option" onclick="selectChip(this)">
+                                <input type="radio" name="emotion" value="rat-tuc"> Rất tức
+                            </label>
+                        </div>
+                        <div class="wizard-actions">
+                            <span class="wizard-back" onclick="prevStep(2)">Quay lại</span>
+                            <button type="button" class="btn" onclick="nextStep(4)">Tiếp tục</button>
+                        </div>
+                    </div>
+
+                    <!-- Bước 4: Tên & Mô tả -->
+                    <div class="wizard-step" id="step4">
+                        <input type="text" name="log_name" class="big-input" placeholder="Tên vấn đề..." required autofocus>
+                        <textarea name="log_content" class="big-textarea" placeholder="Mô tả chi tiết vấn đề..." required></textarea>
+                        <div class="wizard-actions">
+                            <span class="wizard-back" onclick="prevStep(3)">Quay lại</span>
+                            <button type="submit" name="add_log" class="btn">Hoàn thành</button>
                         </div>
                     </div>
                 </form>
             </div>
         </div>
 
-        <!-- Modal Xem Nội Dung Đầy Đủ -->
+        <!-- Modal xem nội dung đầy đủ -->
         <div id="contentModal" class="modal">
             <div class="modal-content">
                 <span class="close" id="closeContentModal">&times;</span>
-                <h2>Nội Dung Chi Tiết Vấn Đề</h2>
-                <pre id="fullContentDisplay"
-                    style="background:#f8f9fa; padding:20px; border-radius:8px; max-height:60vh; overflow-y:auto;"></pre>
+                <h2>Nội dung chi tiết</h2>
+                <div class="content-wrapper">
+                    <div id="fullContentDisplay" class="content-text"></div>
+                </div>
             </div>
         </div>
+    </div>
 
-        <script>
-            function openTab(evt, tabName) {
-                document.querySelectorAll(".tabcontent").forEach(t => t.style.display = "none");
-                document.querySelectorAll(".tablink").forEach(t => t.classList.remove("active"));
-                document.getElementById(tabName).style.display = "block";
-                evt.currentTarget.classList.add("active");
-            }
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleBtn = document.getElementById('toggleListBtn');
+            const container = document.getElementById('logsListContainer');
+            const icon = document.getElementById('toggleIcon');
 
-            // Wizard Logic with Animations
-            const wizard = document.getElementById("addLogWizard");
-
-            function openWizard() {
-                wizard.style.display = 'block';
-                document.querySelector('input[name="log_name"]').focus();
-            }
-
-            function closeWizard() {
-                wizard.style.display = 'none';
-                // Reset steps
-                document.getElementById("step1").className = "wizard-step active";
-                document.getElementById("step1").style.display = "block";
-                document.getElementById("step2").className = "wizard-step";
-                document.getElementById("step2").style.display = "none";
-            }
-
-            // Close the logs list overlay and return to dashboard
-            function closeLogsList() {
-                const logsListContainer = document.getElementById("logsListContainer");
-                const toggleIcon = document.getElementById("toggleIcon");
-                logsListContainer.classList.remove('show');
-                if (toggleIcon) toggleIcon.textContent = '☰';
-            }
-
-            function nextStep() {
-                const name = document.querySelector('input[name="log_name"]').value;
-                const content = document.querySelector('textarea[name="log_content"]').value;
-                const step1 = document.getElementById("step1");
-                const step2 = document.getElementById("step2");
-
-                if (!name || !content) {
-                    alert("Vui lòng nhập tên và nội dung!");
-                    return;
-                }
-
-                // Animate Step 1 Out
-                step1.classList.add("step-exit-left");
-
-                // Wait for animation, then switch
-                setTimeout(() => {
-                    step1.classList.remove("active", "step-exit-left");
-                    step1.style.display = "none";
-
-                    step2.style.display = "block";
-                    step2.classList.add("step-enter-right", "active");
-                }, 280); // slightly less than 0.3s CSS duration
-            }
-
-            function prevStep() {
-                const step1 = document.getElementById("step1");
-                const step2 = document.getElementById("step2");
-
-                step2.classList.remove("step-enter-right");
-                // Can add a reverse exit animation here if desired, 
-                // for now just simple switch back
-                step2.classList.remove("active");
-                step2.style.display = "none";
-
-                step1.style.display = "block";
-                step1.classList.add("active"); // Simple fade in or just appear
-            }
-
-            // Toggle List Logic
-            const toggleListBtn = document.getElementById("toggleListBtn");
-            const logsListContainer = document.getElementById("logsListContainer");
-            const toggleIcon = document.getElementById("toggleIcon");
-
-            toggleListBtn && toggleListBtn.addEventListener('click', () => {
-                const isShowing = logsListContainer.classList.contains('show');
-
-                if (isShowing) {
-                    logsListContainer.classList.remove('show');
-                    toggleIcon.textContent = '☰';
-                    // Optional: Reset scroll position after fade out?
-                } else {
-                    logsListContainer.classList.add('show');
-                    toggleIcon.textContent = '▼';
-                }
+            // Toggle danh sách
+            toggleBtn?.addEventListener('click', () => {
+                container.classList.toggle('show');
+                icon.textContent = container.classList.contains('show') ? '▼' : '☰';
             });
 
-            function selectChip(el) {
-                // Remove selected from all siblings
-                el.parentElement.querySelectorAll('.chip-option').forEach(c => c.classList.remove('selected'));
-                el.classList.add('selected');
-                // Check the radio inside
-                el.querySelector('input').checked = true;
-            }
+            document.querySelector('.close-list-btn')?.addEventListener('click', () => {
+                container.classList.remove('show');
+                icon.textContent = '☰';
+            });
 
-            // Removed openWizardBtn listener as we use onclick in HTML now
-
-
-            // Modal Xem Nội Dung (giữ nguyên)
-            const contentModal = document.getElementById("contentModal");
-            const fullContentDisplay = document.getElementById("fullContentDisplay");
-            const closeContent = contentModal ? contentModal.querySelector('.close') : null;
-
-            // Khi click vào nội dung rút gọn
+            // Modal nội dung
             document.querySelectorAll('.content-preview').forEach(item => {
-                item.addEventListener('click', function () {
-                    fullContentDisplay.textContent = this.getAttribute('data-full');
-                    contentModal.style.display = 'block';
+                item.addEventListener('click', () => {
+                    const id = parseInt(item.dataset.logId);
+                    const modal = document.getElementById('contentModal');
+                    const display = document.getElementById('fullContentDisplay');
+
+                    display.textContent = (logContents && logContents[id]) ? logContents[id] : 'Không tìm thấy nội dung.';
+                    modal.style.display = 'block';
+                    requestAnimationFrame(() => modal.classList.add('show'));
                 });
             });
 
-            closeContent && closeContent.addEventListener('click', () => contentModal.style.display = 'none');
-
-            // Close wizard on outside click? Maybe no, to focus user.
-            // window.addEventListener('click', (e) => {
-            //    if (e.target === contentModal) contentModal.style.display = 'none';
-            // });
-
-            document.addEventListener('DOMContentLoaded', () => {
-                const activeBtn = document.querySelector('.tablink.active') || document.querySelector('.tablink');
-                if (activeBtn) activeBtn.click();
+            document.getElementById('closeContentModal')?.addEventListener('click', () => {
+                const modal = document.getElementById('contentModal');
+                modal.classList.remove('show');
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                    document.getElementById('fullContentDisplay').textContent = '';
+                }, 180);
             });
-        </script>
+
+            window.addEventListener('click', e => {
+                if (e.target.id === 'contentModal') {
+                    const modal = document.getElementById('contentModal');
+                    modal.classList.remove('show');
+                    setTimeout(() => modal.style.display = 'none', 180);
+                }
+            });
+        });
+
+        // Wizard functions
+        function openWizard() {
+            document.getElementById('addLogWizard').style.display = 'block';
+        }
+
+        function closeWizard() {
+            document.getElementById('addLogWizard').style.display = 'none';
+        }
+
+        function handleNext() {
+            const selected = document.querySelector('input[name="repeat"]:checked');
+            if (!selected) {
+                alert("Vui lòng chọn một lựa chọn!");
+                return;
+            }
+
+            if (selected.value === 'same') {
+                // Kích hoạt gửi form ngay lập tức
+                // Lúc này PHP sẽ nhận được $_POST['repeat'] = 'same' và tự thực hiện logic copy
+                const form = document.getElementById('wizardForm');
+
+                // Tạo thêm input ẩn add_log để PHP nhận biết là hành động submit
+                const hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'add_log';
+                hiddenInput.value = '1';
+                form.appendChild(hiddenInput);
+
+                form.submit();
+            } else {
+                // Chuyển sang bước tiếp theo nếu chọn "Có" hoặc "Không"
+                nextStep(2);
+            }
+        }
+
+        function nextStep(step) {
+            document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
+            document.getElementById(`step${step}`).classList.add('active');
+        }
+
+        function prevStep(step) {
+            nextStep(step);
+        }
+
+        function selectChip(el) {
+            el.parentElement.querySelectorAll('.chip-option').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            el.querySelector('input').checked = true;
+        }
+    </script>
 </body>
 
 </html>

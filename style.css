@@ -485,7 +485,7 @@ tr:hover td {
     outline: none;
     line-height: 1.6;
     min-height: 200px;
-    padding: 0;
+    padding: 10px;
 }
 
 .big-textarea::placeholder {
@@ -761,7 +761,7 @@ pre {
     outline: none;
     line-height: 1.6;
     min-height: 150px;
-    padding: 0;
+    padding: 10px;
 }
 
 .big-textarea::placeholder {
@@ -1513,13 +1513,13 @@ pre {
 }
 
 .log-card {
-    display: block;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     background: #16181D;
     border-radius: 12px;
     padding: 16px 20px;
     margin-bottom: 12px;
-    text-decoration: none;
-    color: inherit;
     border: 1px solid rgba(255, 255, 255, 0.05);
     transition: all 0.2s ease;
 }
@@ -1571,6 +1571,11 @@ pre {
     background: rgba(255, 255, 255, 0.05);
     padding: 2px 8px;
     border-radius: 8px;
+}
+
+.log-left {
+    flex: 1;
+    min-width: 0;
 }
 
 /* Empty state */
@@ -1751,4 +1756,151 @@ pre {
     color: var(--text-secondary);
     padding: 80px 20px;
     font-size: 15px;
+}
+
+.chip-group {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 24px 0;
+}
+
+.chip-option {
+    padding: 12px 24px;
+    background: #16181D;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 15px;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chip-option:hover {
+    background: #1e2129;
+    border-color: var(--accent-color);
+}
+
+.chip-option.selected,
+.chip-option input:checked+span {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+/* Checkbox multi-select */
+.chip-option input[type="checkbox"] {
+    display: none;
+}
+
+.chip-option input[type="checkbox"]:checked+span {
+    background: var(--accent-color);
+    color: white;
+}
+
+/* Emotion Chips - Hiệu ứng khi chọn */
+.emotion-chips .chip-option {
+    padding: 12px 20px;
+    font-size: 15px;
+    gap: 8px;
+    transition: all 0.25s ease;
+    cursor: pointer;
+}
+
+.emotion-chips .chip-option:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.emotion-chips .chip-option.selected {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    font-weight: 600;
+}
+
+/* Màu nền theo mức độ cảm xúc */
+.emotion-chips input[value="rat-tot"]~span {
+    background: #34d399;
+    color: white;
+}
+
+/* Rất tốt */
+.emotion-chips input[value="tot"]~span {
+    background: #60a5fa;
+    color: white;
+}
+
+/* Tốt */
+.emotion-chips input[value="binh-thuong"]~span {
+    background: #9ca3af;
+    color: white;
+}
+
+/* Bình thường */
+.emotion-chips input[value="tuc"]~span {
+    background: #fbbf24;
+    color: white;
+}
+
+/* Tức */
+.emotion-chips input[value="rat-tuc"]~span {
+    background: #ef4444;
+    color: white;
+}
+
+/* Rất tức */
+
+/* Fix cho radio + span */
+.emotion-chips .chip-option input {
+    display: none;
+}
+
+.emotion-chips .chip-option.selected span {
+    background: inherit !important;
+    color: inherit !important;
+}
+
+/* Trang chi tiết vấn đề */
+.detail-header {
+    margin: 32px 0 24px;
+}
+.detail-header .log-status-tag {
+    font-size: 14px;
+    margin-bottom: 12px;
+    display: inline-block;
+}
+.detail-header h1 {
+    font-size: 28px;
+    margin: 0;
+}
+
+.detail-stats {
+    display: flex;
+    gap: 32px;
+    margin-bottom: 32px;
+}
+.stat-item {
+    text-align: center;
+}
+.stat-item strong {
+    display: block;
+    font-size: 28px;
+    color: var(--accent-color);
+}
+.stat-item span {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.detail-timeline {
+    margin-bottom: 32px;
+    color: var(--text-secondary);
+}
+.detail-timeline h3 {
+    font-size: 16px;
+    margin-bottom: 12px;
 }

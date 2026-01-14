@@ -80,17 +80,25 @@ if (isset($_SESSION['success_message'])) {
 
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản Lý Log & Solution</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Fluency Log">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="container">
         <!-- User Info -->
         <div class="user-info">
-            Xin chào <strong><?= htmlspecialchars($username) ?></strong> | 
+            Xin chào <strong><?= htmlspecialchars($username) ?></strong> |
             <a href="logout.php">Đăng xuất</a>
         </div>
 
@@ -216,59 +224,82 @@ if (isset($_SESSION['success_message'])) {
     </div>
 
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const toggleBtn = document.getElementById('toggleListBtn');
-        const container = document.getElementById('logsListContainer');
-        const icon = document.getElementById('toggleIcon');
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('Service Worker đã sẵn sàng!', reg))
+                    .catch(err => console.log('Lỗi đăng ký SW', err));
+            });
+        }
 
-        // Toggle danh sách
-        toggleBtn?.addEventListener('click', () => {
-            container.classList.toggle('show');
-            icon.textContent = container.classList.contains('show') ? '▼' : '☰';
-        });
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleBtn = document.getElementById('toggleListBtn');
+            const container = document.getElementById('logsListContainer');
+            const icon = document.getElementById('toggleIcon');
 
-        document.querySelector('.close-list-btn')?.addEventListener('click', () => {
-            container.classList.remove('show');
-            icon.textContent = '☰';
-        });
+            // Toggle danh sách
+            toggleBtn?.addEventListener('click', () => {
+                container.classList.toggle('show');
+                icon.textContent = container.classList.contains('show') ? '▼' : '☰';
+            });
 
-        // Modal nội dung
-        document.querySelectorAll('.content-preview').forEach(item => {
-            item.addEventListener('click', () => {
-                const id = parseInt(item.dataset.logId);
+            document.querySelector('.close-list-btn')?.addEventListener('click', () => {
+                container.classList.remove('show');
+                icon.textContent = '☰';
+            });
+
+            // Modal nội dung
+            document.querySelectorAll('.content-preview').forEach(item => {
+                item.addEventListener('click', () => {
+                    const id = parseInt(item.dataset.logId);
+                    const modal = document.getElementById('contentModal');
+                    const display = document.getElementById('fullContentDisplay');
+
+                    display.textContent = (logContents && logContents[id]) ? logContents[id] : 'Không tìm thấy nội dung.';
+                    modal.style.display = 'block';
+                    requestAnimationFrame(() => modal.classList.add('show'));
+                });
+            });
+
+            document.getElementById('closeContentModal')?.addEventListener('click', () => {
                 const modal = document.getElementById('contentModal');
-                const display = document.getElementById('fullContentDisplay');
+                modal.classList.remove('show');
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                    document.getElementById('fullContentDisplay').textContent = '';
+                }, 180);
+            });
 
-                display.textContent = (logContents && logContents[id]) ? logContents[id] : 'Không tìm thấy nội dung.';
-                modal.style.display = 'block';
-                requestAnimationFrame(() => modal.classList.add('show'));
+            window.addEventListener('click', e => {
+                if (e.target.id === 'contentModal') {
+                    const modal = document.getElementById('contentModal');
+                    modal.classList.remove('show');
+                    setTimeout(() => modal.style.display = 'none', 180);
+                }
             });
         });
 
-        document.getElementById('closeContentModal')?.addEventListener('click', () => {
-            const modal = document.getElementById('contentModal');
-            modal.classList.remove('show');
-            setTimeout(() => {
-                modal.style.display = 'none';
-                document.getElementById('fullContentDisplay').textContent = '';
-            }, 180);
-        });
+        // Wizard functions
+        function openWizard() {
+            document.getElementById('addLogWizard').style.display = 'block';
+        }
 
-        window.addEventListener('click', e => {
-            if (e.target.id === 'contentModal') {
-                const modal = document.getElementById('contentModal');
-                modal.classList.remove('show');
-                setTimeout(() => modal.style.display = 'none', 180);
-            }
-        });
-    });
+        function closeWizard() {
+            document.getElementById('addLogWizard').style.display = 'none';
+        }
 
-    // Wizard functions
-    function openWizard() { document.getElementById('addLogWizard').style.display = 'block'; }
-    function closeWizard() { document.getElementById('addLogWizard').style.display = 'none'; }
-    function nextStep() { /* logic wizard */ }
-    function prevStep() { /* logic wizard */ }
-    function selectChip(el) { /* logic chip */ }
+        function nextStep() {
+            /* logic wizard */
+        }
+
+        function prevStep() {
+            /* logic wizard */
+        }
+
+        function selectChip(el) {
+            /* logic chip */
+        }
     </script>
 </body>
+
 </html>

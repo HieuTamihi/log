@@ -112,15 +112,6 @@ foreach ($logs as $row) {
 echo '};';
 echo '</script>';
 
-// Thông báo
-$alert = '';
-if (isset($_SESSION['success_message'])) {
-    $alert = '<div class="alert success">' . $_SESSION['success_message'] . '</div>';
-    unset($_SESSION['success_message']);
-} elseif (isset($_SESSION['error_message'])) {
-    $alert = '<div class="alert error">' . $_SESSION['error_message'] . '</div>';
-    unset($_SESSION['error_message']);
-}
 function formatTimeAgo($datetime)
 {
     if (!$datetime) return "không rõ";
@@ -153,6 +144,23 @@ function formatTimeAgo($datetime)
 
     return floor($diff) . ' giây trước';
 }
+$msg = '';
+$type = 'info';
+
+if (isset($_SESSION['success_message'])) {
+    $msg = $_SESSION['success_message'];
+    $type = 'success';
+    unset($_SESSION['success_message']);
+} elseif (isset($_SESSION['error_message'])) {
+    $msg = $_SESSION['error_message'];
+    $type = 'error';
+    unset($_SESSION['error_message']);
+} elseif (isset($_SESSION['msg'])) { // Dành cho trang solution_detail
+    $msg = $_SESSION['msg'];
+    $type = 'success';
+    unset($_SESSION['msg']);
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -171,8 +179,15 @@ function formatTimeAgo($datetime)
         <div class="user-info">
             Xin chào <strong><?= htmlspecialchars($username) ?></strong> | <a href="logout.php">Đăng xuất</a>
         </div>
-
-        <?= $alert ?>
+        <?php
+        // Nếu có tin nhắn, in ra script để gọi Toast
+        if ($msg): ?>
+            <script>
+                document.addEventListener('DOMContentLoaded', () => {
+                    showToast("<?= addslashes($msg) ?>", "<?= $type ?>");
+                });
+            </script>
+        <?php endif; ?>
 
         <!-- Stats -->
         <div class="stats-grid">
@@ -245,7 +260,7 @@ function formatTimeAgo($datetime)
                             <?php if ($has_solution): ?>
                                 <a href="solution_detail.php?id=<?= (int)$row['sid'] ?>" class="btn btn-small">Xem Giải Pháp</a>
                             <?php else: ?>
-                                <a href="add_solution.php?log_id=<?= (int)$row['id'] ?>" class="btn btn-small btn-primary">Tạo Giải Pháp</a>
+                                <a href="create_solution.php?log_id=<?= (int)$row['id'] ?>" class="btn btn-small btn-primary">Tạo Giải Pháp</a>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -355,6 +370,7 @@ function formatTimeAgo($datetime)
         </div>
     </div>
 
+    <script src="style.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const toggleBtn = document.getElementById('toggleListBtn');
@@ -415,7 +431,7 @@ function formatTimeAgo($datetime)
         function handleNext() {
             const selected = document.querySelector('input[name="repeat"]:checked');
             if (!selected) {
-                alert("Vui lòng chọn một lựa chọn!");
+                showToast("Vui lòng chọn một lựa chọn!");
                 return;
             }
 

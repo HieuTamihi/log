@@ -1,54 +1,94 @@
 <?php
 include 'db.php';
-if (!isset($_GET['id']))
-    die("Không có ID");
-$id = (int) $_GET['id'];
+requireLogin();
 
-// Xử lý cập nhật
-if (isset($_POST['update_solution'])) {
-    $curStmt = $conn->prepare("SELECT * FROM solutions WHERE id = ?");
-    $curStmt->bind_param("i", $id);
-    $curStmt->execute();
-    $cur = $curStmt->get_result()->fetch_assoc();
-    $curStmt->close();
-
-    $new_name = $_POST['name'];
-    $new_content = $_POST['content'];
-    $new_version = $_POST['version'] ?: $cur['version'];
-    $new_status = $_POST['status'];
-
-    // Nếu có thay đổi → lưu lịch sử
-    if (
-        $new_name !== $cur['name'] || $new_content !== $cur['content'] ||
-        $new_version !== $cur['version'] || $new_status !== $cur['status']
-    ) {
-
-        $hist = $conn->prepare("INSERT INTO solution_history (solution_id, name, content, version, status) VALUES (?, ?, ?, ?, ?)");
-        $hist->bind_param("issss", $id, $cur['name'], $cur['content'], $cur['version'], $cur['status']);
-        $hist->execute();
-        $hist->close();
-    }
-
-    // Cập nhật bản hiện tại (prepared statement)
-    $up = $conn->prepare("UPDATE solutions SET name = ?, content = ?, version = ?, status = ? WHERE id = ?");
-    $up->bind_param("ssssi", $new_name, $new_content, $new_version, $new_status, $id);
-    $up->execute();
-    $up->close();
-
-    $_SESSION['msg'] = "Cập nhật giải pháp thành công!";
-    header("Location: solution_detail.php?id=$id");
+if (!isset($_GET['id'])) {
+    header("Location: index.php");
     exit();
 }
 
-// Lấy dữ liệu hiện tại (prepared statement)
-$stmt = $conn->prepare("SELECT S.*, L.name AS log_name, L.content AS log_content FROM solutions S JOIN logs L ON S.log_id = L.id WHERE S.id = ?");
+$id = (int)$_GET['id'];
+$current_user_id = (int)getCurrentUserId();
+
+// 1. LẤY DỮ LIỆU HIỆN TẠI & THÔNG TIN VẤN ĐỀ LIÊN QUAN
+$stmt = $conn->prepare("
+    SELECT S.*, L.name AS log_name, L.content AS log_content 
+    FROM solutions S 
+    JOIN logs L ON S.log_id = L.id 
+    WHERE S.id = ?
+");
 $stmt->bind_param("i", $id);
 $stmt->execute();
 $row = $stmt->get_result()->fetch_assoc();
 $stmt->close();
 
 if (!$row) {
-    die("Giải pháp không tồn tại.");
+    $_SESSION['error_message'] = "Giải pháp không tồn tại.";
+    header("Location: index.php");
+    exit();
+}
+
+// 2. KIỂM TRA QUYỀN SỞ HỮU
+$is_sol_owner = ($current_user_id === (int)$row['user_id']);
+
+// 3. XỬ LÝ CẬP NHẬT (Chỉ chủ sở hữu mới được sửa)
+if (isset($_POST['update_solution']) && $is_sol_owner) {
+    $new_name = trim($_POST['name']);
+    $new_content = trim($_POST['content']);
+    $new_version = trim($_POST['version']) ?: $row['version'];
+    $new_status = $_POST['status'];
+
+    // Nếu có thay đổi so với bản cũ -> Lưu vào lịch sử trước khi ghi đè
+    if ($new_name !== $row['name'] || $new_content !== $row['content'] || $new_status !== $row['status']) {
+        $hist = $conn->prepare("INSERT INTO solution_history (solution_id, name, content, version, status) VALUES (?, ?, ?, ?, ?)");
+        $hist->bind_param("issss", $id, $row['name'], $row['content'], $row['version'], $row['status']);
+        $hist->execute();
+        $hist->close();
+    }
+
+    // Cập nhật bản ghi hiện tại
+    $up = $conn->prepare("UPDATE solutions SET name = ?, content = ?, version = ?, status = ? WHERE id = ?");
+    $up->bind_param("ssssi", $new_name, $new_content, $new_version, $new_status, $id);
+
+    if ($up->execute()) {
+        $_SESSION['msg'] = "Cập nhật giải pháp thành công!";
+    } else {
+        $_SESSION['error_message'] = "Lỗi khi cập nhật giải pháp.";
+    }
+    $up->close();
+    header("Location: solution_detail.php?id=$id");
+    exit();
+}
+
+// 4. XỬ LÝ XÓA
+if (isset($_POST['delete_solution']) && $is_sol_owner) {
+    // Xóa lịch sử trước (nếu DB không để Cascade)
+    $conn->query("DELETE FROM solution_history WHERE solution_id = $id");
+    if ($conn->query("DELETE FROM solutions WHERE id = $id")) {
+        $_SESSION['success_message'] = "Đã xóa giải pháp vĩnh viễn.";
+        header("Location: index.php");
+    } else {
+        $_SESSION['error_message'] = "Không thể xóa giải pháp này.";
+        header("Location: solution_detail.php?id=$id");
+    }
+    exit();
+}
+
+// 5. CHUẨN BỊ THÔNG BÁO TOAST
+$toast_msg = '';
+$toast_type = 'info';
+if (isset($_SESSION['success_message'])) {
+    $toast_msg = $_SESSION['success_message'];
+    $toast_type = 'success';
+    unset($_SESSION['success_message']);
+} elseif (isset($_SESSION['error_message'])) {
+    $toast_msg = $_SESSION['error_message'];
+    $toast_type = 'error';
+    unset($_SESSION['error_message']);
+} elseif (isset($_SESSION['msg'])) {
+    $toast_msg = $_SESSION['msg'];
+    $toast_type = 'success';
+    unset($_SESSION['msg']);
 }
 ?>
 
@@ -57,145 +97,170 @@ if (!$row) {
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo htmlspecialchars($row['name']); ?></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title><?= htmlspecialchars($row['name']) ?> | Chi tiết</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <div class="container">
-        <h1><?php echo htmlspecialchars($row['log_name']); ?> → <?php echo htmlspecialchars($row['name']); ?></h1>
-
-        <?php if (isset($_SESSION['success_message'])): ?>
-            <div class="alert success"><?php echo $_SESSION['success_message'];
-                                        unset($_SESSION['success_message']); ?>
-            </div>
-        <?php endif; ?>
-        <?php if (isset($_SESSION['msg'])): ?>
-            <div class="alert success"><?php echo $_SESSION['msg'];
-                                        unset($_SESSION['msg']); ?></div>
-        <?php endif; ?>
-
-        <div class="card" style="margin-bottom: 24px;">
-            <h2>Vấn Đề</h2>
-            <div class="code-block">
-                <?php echo htmlspecialchars($row['log_content']); ?>
-            </div>
-
-            <h2>Giải Pháp Hiện Tại</h2>
-            <div class="code-block">
-                <?php echo htmlspecialchars($row['content']); ?>
-            </div>
-
-            <!-- Nút mở Modal Cập Nhật -->
-            <div style="text-align: center; margin-top: 30px;">
-                <button id="openUpdateModal" class="btn">
-                    Cập Nhật Giải Pháp
-                </button>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2>Lịch Sử Thay Đổi (3 phiên bản gần nhất)</h2>
-            <table>
-                <tr>
-                    <th>Phiên Bản</th>
-                    <th>Trạng Thái</th>
-                    <th>Nội Dung (rút gọn)</th>
-                    <th>Thời Gian</th>
-                </tr>
-                <?php
-                // Chỉ lấy 3 bản ghi gần nhất
-                $hist = $conn->prepare("SELECT * FROM solution_history WHERE solution_id = ? ORDER BY changed_at DESC LIMIT 3");
-                $hist->bind_param("i", $id);
-                $hist->execute();
-                $resHist = $hist->get_result();
-
-                if ($resHist->num_rows == 0) {
-                    echo "<tr><td colspan='4'>Chưa có thay đổi nào</td></tr>";
-                } else {
-                    while ($h = $resHist->fetch_assoc()) {
-                        $stt = $h['status'] == 'draft' ? 'Bản nháp' : ($h['status'] == 'testing' ? 'Đang kiểm tra' : 'Hoàn thành');
-
-                        // Rút gọn nội dung để bảng không quá dài
-                        $short_content = mb_strlen($h['content'], 'UTF-8') > 150
-                            ? mb_substr(htmlspecialchars($h['content']), 0, 150, 'UTF-8') . '...'
-                            : htmlspecialchars($h['content']);
-
-                        echo "<tr>\n                        <td>" . htmlspecialchars($h['version']) . "</td>\n                        <td>$stt</td>\n                        <td>$short_content</td>\n                        <td>" . htmlspecialchars($h['changed_at']) . "</td>\n                    </tr>";
-                    }
-                }
-                $hist->close();
-                ?>
-            </table>
-        </div>
-
+    <div class="container" style="padding-bottom: 100px;">
         <div style="margin-top: 20px;">
-            <a href="index.php" class="btn btn-secondary">Quay Lại Danh Sách</a>
+            <a href="index.php" class="wizard-back">← Quay lại danh sách</a>
         </div>
-    </div>
 
-    <!-- Modal Cập Nhật Giải Pháp -->
-    <div id="updateModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h2>Cập Nhật Giải Pháp</h2>
-            <form method="POST">
-                <label>Tên giải pháp:</label>
-                <input type="text" name="name" value="<?php echo htmlspecialchars($row['name']); ?>" required>
+        <div class="detail-header">
+            <span class="log-status-tag <?= $row['status'] === 'done' ? 'done' : 'in-progress' ?>">
+                <?= $row['status'] === 'done' ? 'Hoàn thành' : ($row['status'] === 'testing' ? 'Đang kiểm tra' : 'Bản nháp') ?>
+            </span>
+            <h1><?= htmlspecialchars($row['log_name']) ?></h1>
+            <p style="color: var(--text-secondary); margin-top: 8px;">Giải pháp: <strong><?= htmlspecialchars($row['name']) ?></strong> (v<?= htmlspecialchars($row['version']) ?>)</p>
+        </div>
 
-                <label>Nội dung:</label>
-                <textarea name="content" rows="10" required><?php echo htmlspecialchars($row['content']); ?></textarea>
+        <!-- Nội dung chính -->
+        <div class="card" style="margin-bottom: 24px;">
+            <h2 style="font-size: 14px; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px;">Vấn Đề Gốc</h2>
+            <div class="code-block" style="margin-bottom: 24px; background: rgba(0,0,0,0.2);">
+                <?= nl2br(htmlspecialchars($row['log_content'])) ?>
+            </div>
 
-                <label>Phiên bản:</label>
-                <input type="text" name="version" value="<?php echo htmlspecialchars($row['version']); ?>">
+            <h2 style="font-size: 14px; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 12px;">Chi Tiết Giải Pháp</h2>
+            <div class="code-block" style="border-left: 3px solid var(--accent-color);">
+                <?= nl2br(htmlspecialchars($row['content'])) ?>
+            </div>
 
-                <label>Trạng thái:</label>
-                <select name="status">
-                    <option value="draft" <?php if ($row['status'] == 'draft')
-                                                echo 'selected'; ?>>Bản nháp</option>
-                    <option value="testing" <?php if ($row['status'] == 'testing')
-                                                echo 'selected'; ?>>Đang kiểm tra
-                    </option>
-                    <option value="done" <?php if ($row['status'] == 'done')
-                                                echo 'selected'; ?>>Hoàn thành</option>
-                </select>
-
-                <div style="margin-top: 20px;">
-                    <button type="submit" name="update_solution">Lưu Thay Đổi</button>
-                    <button type="button" id="cancelUpdate" class="btn btn-secondary">Hủy</button>
+            <?php if ($is_sol_owner): ?>
+                <div style="text-align: center; margin-top: 30px;">
+                    <button id="openUpdateModal" class="btn btn-primary" style="width: 100%; max-width: 300px;">
+                        Cập Nhật Giải Pháp
+                    </button>
                 </div>
-            </form>
+            <?php endif; ?>
         </div>
+
+        <!-- Lịch sử thay đổi -->
+        <div class="card">
+            <h2 style="font-size: 16px; margin-bottom: 16px;">Lịch sử thay đổi</h2>
+            <div style="overflow-x: auto;">
+                <table style="min-width: 500px;">
+                    <thead>
+                        <tr>
+                            <th>Phiên Bản</th>
+                            <th>Trạng Thái</th>
+                            <th>Nội dung cũ</th>
+                            <th>Ngày sửa</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $hist_stmt = $conn->prepare("SELECT * FROM solution_history WHERE solution_id = ? ORDER BY changed_at DESC LIMIT 3");
+                        $hist_stmt->bind_param("i", $id);
+                        $hist_stmt->execute();
+                        $resHist = $hist_stmt->get_result();
+
+                        if ($resHist->num_rows == 0): ?>
+                            <tr>
+                                <td colspan='4' style="text-align:center; color: var(--text-secondary);">Chưa có lịch sử chỉnh sửa.</td>
+                            </tr>
+                            <?php else:
+                            while ($h = $resHist->fetch_assoc()):
+                                $stt_text = $h['status'] === 'done' ? 'Hoàn thành' : ($h['status'] === 'testing' ? 'Đang kiểm tra' : 'Nháp');
+                            ?>
+                                <tr>
+                                    <td>v<?= htmlspecialchars($h['version']) ?></td>
+                                    <td><?= $stt_text ?></td>
+                                    <td style="font-size: 12px; color: var(--text-secondary);"><?= mb_strimwidth(htmlspecialchars($h['content']), 0, 50, "...") ?></td>
+                                    <td style="font-size: 12px;"><?= date('d/m H:i', strtotime($h['changed_at'])) ?></td>
+                                </tr>
+                        <?php endwhile;
+                        endif;
+                        $hist_stmt->close(); ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Hành động nguy hiểm -->
+        <?php if ($is_sol_owner): ?>
+            <div class="detail-actions" style="margin-top: 40px; border-top: 1px solid var(--border-color); padding-top: 24px;">
+                <p style="font-size: 12px; color: var(--error); margin-bottom: 12px;">Vùng nguy hiểm:</p>
+                <form method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn xóa vĩnh viễn giải pháp này?');">
+                    <button type="submit" name="delete_solution" class="btn btn-danger" style="width: 100%;">Xóa giải pháp</button>
+                </form>
+            </div>
+        <?php endif; ?>
     </div>
 
+    <!-- Modal Cập Nhật (Chỉ render nếu là chủ sở hữu) -->
+    <?php if ($is_sol_owner): ?>
+        <div id="updateModal" class="modal">
+            <div class="modal-content" style="max-width: 500px;">
+                <span class="close">&times;</span>
+                <h2 style="margin-bottom: 20px;">Cập Nhật Giải Pháp</h2>
+                <form method="POST">
+                    <label>Tên giải pháp</label>
+                    <input type="text" name="name" class="big-input" style="font-size: 16px; padding: 12px;" value="<?= htmlspecialchars($row['name']) ?>" required>
+
+                    <label>Nội dung hướng dẫn</label>
+                    <textarea name="content" class="big-textarea" style="font-size: 15px; min-height: 200px;" required><?= htmlspecialchars($row['content']) ?></textarea>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px;">
+                        <div>
+                            <label>Phiên bản</label>
+                            <input type="text" name="version" class="big-input" style="font-size: 16px; padding: 12px;" value="<?= htmlspecialchars($row['version']) ?>">
+                        </div>
+                        <div>
+                            <label>Trạng thái</label>
+                            <select name="status" class="big-input" style="font-size: 16px; padding: 12px;">
+                                <option value="draft" <?= $row['status'] == 'draft' ? 'selected' : '' ?>>Bản nháp</option>
+                                <option value="testing" <?= $row['status'] == 'testing' ? 'selected' : '' ?>>Đang kiểm tra</option>
+                                <option value="done" <?= $row['status'] == 'done' ? 'selected' : '' ?>>Hoàn thành</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-actions" style="margin-top: 24px; display: flex; flex-direction: column; gap: 10px;">
+                        <button type="submit" name="update_solution" class="btn btn-primary" style="width: 100%;">Lưu Thay Đổi</button>
+                        <button type="button" id="cancelUpdate" class="btn btn-secondary" style="width: 100%;">Hủy bỏ</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <script src="style.js"></script>
     <script>
+        // Kích hoạt Toast từ Server
+        <?php if ($toast_msg): ?>
+            document.addEventListener('DOMContentLoaded', () => {
+                if (typeof showToast === "function") {
+                    showToast("<?= addslashes($toast_msg) ?>", "<?= $toast_type ?>");
+                }
+            });
+        <?php endif; ?>
+
+        // Xử lý Modal
         const modal = document.getElementById("updateModal");
         const openBtn = document.getElementById("openUpdateModal");
-        const closeBtn = modal ? modal.querySelector('.close') : null;
+        const closeBtn = document.querySelector(".close");
         const cancelBtn = document.getElementById("cancelUpdate");
 
-        openBtn && openBtn.addEventListener('click', () => {
-            modal.style.display = 'block';
-            setTimeout(() => modal.classList.add('show'), 10); // Delay cho mượt
-        });
+        if (openBtn) {
+            openBtn.onclick = () => {
+                modal.style.display = "block";
+                setTimeout(() => modal.classList.add("show"), 10);
+            };
+        }
 
-        closeBtn && closeBtn.addEventListener('click', () => {
-            modal.classList.remove('show');
-            setTimeout(() => modal.style.display = 'none', 300);
-        });
+        const closeModal = () => {
+            modal.classList.remove("show");
+            setTimeout(() => modal.style.display = "none", 300);
+        };
 
-        cancelBtn && cancelBtn.addEventListener('click', () => {
-            modal.classList.remove('show');
-            setTimeout(() => modal.style.display = 'none', 300);
-        });
-
-        window.addEventListener('click', (event) => {
-            if (event.target === modal) {
-                modal.classList.remove('show');
-                setTimeout(() => modal.style.display = 'none', 300);
-            }
-        });
+        if (closeBtn) closeBtn.onclick = closeModal;
+        if (cancelBtn) cancelBtn.onclick = closeModal;
+        window.onclick = (e) => {
+            if (e.target === modal) closeModal();
+        };
     </script>
 </body>
 

@@ -162,12 +162,6 @@ function formatTimeAgo($datetime)
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản Lý Log & Solution</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0a0a0a">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <meta name="apple-mobile-web-app-title" content="Fluency Log">
-    <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -362,14 +356,6 @@ function formatTimeAgo($datetime)
     </div>
 
     <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('Service Worker đã sẵn sàng!', reg))
-                    .catch(err => console.log('Lỗi đăng ký SW', err));
-            });
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
             const toggleBtn = document.getElementById('toggleListBtn');
             const container = document.getElementById('logsListContainer');

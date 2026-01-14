@@ -8,7 +8,6 @@ if (isset($_POST['login'])) {
     if (empty($username) || empty($password)) {
         $error = "Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!";
     } else {
-        // Prepared statement
         $stmt = $conn->prepare("SELECT id, username, password FROM users WHERE username = ?");
         $stmt->bind_param("s", $username);
         $stmt->execute();
@@ -16,17 +15,12 @@ if (isset($_POST['login'])) {
 
         if ($result && $result->num_rows > 0) {
             $user = $result->fetch_assoc();
-
-            // Kiểm tra mật khẩu bằng password_verify
             if (password_verify($password, $user['password'])) {
-                // Đăng nhập thành công: bảo mật session
                 session_regenerate_id(true);
                 $_SESSION['user_id'] = $user['id'];
                 $_SESSION['username'] = $user['username'];
-
-                // Chuyển hướng về index
                 header("Location: index.php");
-                exit();  // Quan trọng: dừng script ngay sau header
+                exit();
             } else {
                 $error = "Mật khẩu không đúng!";
             }
@@ -46,6 +40,19 @@ if (isset($_POST['login'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng Nhập</title>
     <link rel="stylesheet" href="style.css">
+
+    <!-- === CẤU HÌNH PWA CHÈN TẠI ĐÂY === -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Fluency Log">
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icon-192.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icon-192.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="icon-192.png">
+    <!-- ================================ -->
 </head>
 
 <body class="auth-page">
@@ -58,7 +65,7 @@ if (isset($_POST['login'])) {
 
             <?php if (isset($_SESSION['success_message'])): ?>
                 <div class="alert success"><?php echo $_SESSION['success_message'];
-                unset($_SESSION['success_message']); ?>
+                                            unset($_SESSION['success_message']); ?>
                 </div>
             <?php endif; ?>
 
@@ -77,6 +84,18 @@ if (isset($_POST['login'])) {
             </p>
         </div>
     </div>
+
+    <!-- === ĐĂNG KÝ SERVICE WORKER === -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('PWA Service Worker đã chạy!', reg))
+                    .catch(err => console.log('Lỗi PWA:', err));
+            });
+        }
+    </script>
+    <!-- ============================== -->
 </body>
 
 </html>

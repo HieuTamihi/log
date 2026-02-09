@@ -1,7 +1,7 @@
 {
-    "name": "Leverage Fluency",
-    "short_name": "Fluency",
-    "description": "Repeated problem capture - Track and resolve recurring issues",
+    "name": "System Sight",
+    "short_name": "System Sight",
+    "description": "Business Machine - See it. Build it. Improve it.",
     "start_url": "/index.php",
     "display": "standalone",
     "background_color": "#0a0a0f",

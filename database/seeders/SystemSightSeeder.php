@@ -20,6 +20,7 @@ class SystemSightSeeder extends Seeder
             'icon' => '🎯',
             'color' => '#fbbf24',
             'order' => 1,
+            'user_id' => 1,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -31,6 +32,7 @@ class SystemSightSeeder extends Seeder
             'icon' => '💰',
             'color' => '#10b981',
             'order' => 2,
+            'user_id' => 1,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -42,6 +44,7 @@ class SystemSightSeeder extends Seeder
             'icon' => '🚀',
             'color' => '#f97316',
             'order' => 3,
+            'user_id' => 1,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -55,6 +58,7 @@ class SystemSightSeeder extends Seeder
             'icon' => '📝',
             'color' => '#fbbf24',
             'order' => 1,
+            'user_id' => 1,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -67,6 +71,7 @@ class SystemSightSeeder extends Seeder
             'icon' => '📢',
             'color' => '#10b981',
             'order' => 2,
+            'user_id' => 1,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -79,6 +84,7 @@ class SystemSightSeeder extends Seeder
             'icon' => '🎣',
             'color' => '#f97316',
             'order' => 3,
+            'user_id' => 1,
             'created_at' => now(),
             'updated_at' => now(),
         ]);

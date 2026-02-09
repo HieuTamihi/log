@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Danh sách vấn đề - Leverage Fluency')
+@section('title', 'Danh sách vấn đề - System Sight')
 
 @section('content')
 <div class="container">

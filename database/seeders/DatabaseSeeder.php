@@ -21,5 +21,11 @@ class DatabaseSeeder extends Seeder
             'username' => 'admin',
             'password' => Hash::make('admin'),
         ]);
+
+        // Chạy các seeder khác
+        $this->call([
+            SystemSightSeeder::class,
+            NotificationSeeder::class,
+        ]);
     }
 }

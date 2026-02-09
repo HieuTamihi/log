@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Tạo Giải Pháp - Leverage Fluency')
+@section('title', 'Tạo Giải Pháp - System Sight')
 
 @section('body-class', 'form-page')
 

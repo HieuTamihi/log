@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', $solution->name . ' - Leverage Fluency')
+@section('title', $solution->name . ' - System Sight')
 
 @section('content')
 <div class="container">

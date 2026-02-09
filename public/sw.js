@@ -1,4 +1,4 @@
-const CACHE_NAME = 'leverage-fluency-v4';
+const CACHE_NAME = 'system-sight-v1';
 const urlsToCache = [
     '/',
     '/css/style.css',

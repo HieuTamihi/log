@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Đăng Ký - Leverage Fluency')
+@section('title', 'Đăng Ký - System Sight')
 
 @section('body-class', 'auth-page')
 
@@ -9,7 +9,7 @@
     <div class="auth-card">
         <h1>Đăng Ký</h1>
         <p class="auth-subtitle">
-            Tạo tài khoản để bắt đầu quản lý vấn đề
+            Tạo tài khoản System Sight
         </p>
 
         @if ($errors->any())

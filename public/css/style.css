@@ -1,20 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-    --bg-color: #111318;
-    --card-bg: #181B20;
-    --card-bg-hover: #1E2127;
-    --text-primary: #E9EAED;
-    --text-secondary: #737B8C;
-    --text-muted: #585E6B;
-    --accent-color: #3b82f6;
-    --accent-glow: #1E3A8A;
-    --input-bg: rgba(255, 255, 255, 0.03);
-    --border-color: #272C34;
-    --button-primary-bg: #E9EAED;
-    --button-primary-text: #111318;
-    --button-secondary-bg: #181B20;
-    --button-secondary-text: #ABB0BA;
+    --bg-color: #fafbfc;
+    --card-bg: #ffffff;
+    --card-bg-hover: #f8fafc;
+    --text-primary: #1a202c;
+    --text-secondary: #64748b;
+    --text-muted: #94a3b8;
+    --accent-color: #6366f1;
+    --accent-glow: #a855f7;
+    --input-bg: #ffffff;
+    --border-color: #e2e8f0;
+    --button-primary-bg: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    --button-primary-text: #ffffff;
+    --button-secondary-bg: #f8fafc;
+    --button-secondary-text: #64748b;
     --warning-color: #f59e0b;
     --danger-color: #ef4444;
     --success-color: #10b981;
@@ -30,7 +30,7 @@
     padding: 0;
 }
 
-/* Blue Glow Border Effect - Lovable Style */
+/* Light Theme Body */
 body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     background-color: var(--bg-color);
@@ -43,7 +43,7 @@ body {
     overflow-x: hidden;
 }
 
-/* Subtle Blue Vignette Effect - Less intense */
+/* Subtle Gradient Background */
 body::before {
     content: '';
     position: fixed;
@@ -51,8 +51,11 @@ body::before {
     left: 0;
     right: 0;
     bottom: 0;
+    background: 
+        radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+        radial-gradient(circle at 90% 80%, rgba(168, 85, 247, 0.05) 0%, transparent 50%);
     pointer-events: none;
-    z-index: 9999;
+    z-index: -1;
 }
 
 /* Main Container */
@@ -134,6 +137,7 @@ a:hover {
     border: 1px solid var(--border-color);
     transition: all 0.3s ease;
     animation: slideUp 0.5s ease-out backwards;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .stat-card:nth-child(1) { animation-delay: 0.1s; }
@@ -143,7 +147,7 @@ a:hover {
 .stat-card:hover {
     transform: translateY(-2px);
     background: var(--card-bg-hover);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .stat-number {
@@ -245,31 +249,30 @@ a:hover {
     font-weight: 500;
 }
 
-/* ===== HERO BUTTON INLINE - Lovable Style ===== */
+/* ===== HERO BUTTON INLINE - Light Theme ===== */
 .hero-btn-inline {
     width: 100%;
-    background: var(--button-primary-bg);
-    color: var(--button-primary-text);
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    color: #ffffff;
     font-size: 15px;
-    font-weight: 500;
+    font-weight: 600;
     padding: 16px 32px;
-    border-radius: 8px;
+    border-radius: 10px;
     border: none;
     cursor: pointer;
     text-align: center;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .hero-btn-inline:hover {
-    background: #fff;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 .hero-btn-inline:active {
     transform: scale(0.99);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
     transition: all 0.1s ease;
 }
 
@@ -280,13 +283,13 @@ a:hover {
     margin: 8px 0 24px;
 }
 
-/* ===== VIEW PROBLEMS BUTTON - Lovable Style ===== */
+/* ===== VIEW PROBLEMS BUTTON - Light Theme ===== */
 .view-problems-btn {
     width: 100%;
     background: var(--card-bg);
     color: var(--text-secondary);
     border: 1px solid var(--border-color);
-    border-radius: 24px;
+    border-radius: 10px;
     padding: 14px 24px;
     font-size: 14px;
     font-weight: 500;
@@ -302,7 +305,7 @@ a:hover {
 .view-problems-btn:hover {
     background: var(--card-bg-hover);
     color: var(--text-primary);
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: #cbd5e1;
 }
 
 .view-problems-btn svg {
@@ -354,8 +357,8 @@ a:hover {
     right: 20px;
     width: 44px;
     height: 44px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 50%;
     color: var(--text-secondary);
     font-size: 20px;
@@ -365,12 +368,14 @@ a:hover {
     justify-content: center;
     transition: all 0.2s ease;
     z-index: 160;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .close-list-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: #f8fafc;
     color: var(--text-primary);
     transform: rotate(90deg);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* ===== CARDS ===== */
@@ -381,11 +386,13 @@ a:hover {
     border: 1px solid var(--border-color);
     margin-bottom: 16px;
     transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .card:hover {
     background: var(--card-bg-hover);
-    border-color: rgba(255, 255, 255, 0.1);
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .card-title {
@@ -454,27 +461,28 @@ a:hover {
     display: block;
 }
 
-/* ===== BUTTONS - Lovable Style ===== */
+/* ===== BUTTONS - Light Theme ===== */
 .btn, button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    background-color: var(--button-primary-bg);
-    color: var(--button-primary-text);
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    color: #ffffff;
     padding: 12px 24px;
-    border-radius: 8px;
-    font-weight: 500;
+    border-radius: 10px;
+    font-weight: 600;
     font-size: 14px;
     border: none;
     cursor: pointer;
     transition: all 0.2s ease;
     text-decoration: none;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
 }
 
 .btn:hover, button:hover {
-    opacity: 0.9;
     transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
 
 .btn:active, button:active {
@@ -482,14 +490,15 @@ a:hover {
 }
 
 .btn-secondary, button.btn-secondary {
-    background-color: var(--button-secondary-bg);
-    color: var(--button-secondary-text);
-    border: 1px solid var(--border-color);
+    background: #ffffff;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    box-shadow: none;
 }
 
 .btn-secondary:hover {
-    background-color: var(--card-bg-hover);
-    border-color: rgba(255, 255, 255, 0.15);
+    background: #f8fafc;
+    border-color: #cbd5e1;
 }
 
 .btn-small {
@@ -504,13 +513,13 @@ a:hover {
     border-radius: 10px;
 }
 
-/* ===== INPUTS - Lovable Style ===== */
+/* ===== INPUTS - Light Theme ===== */
 label {
     display: block;
     margin-bottom: 8px;
     color: var(--text-secondary);
     font-size: 13px;
-    font-weight: 500;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -518,6 +527,7 @@ label {
 input[type="text"],
 input[type="password"],
 input[type="email"],
+input[type="number"],
 textarea,
 select {
     width: 100%;
@@ -536,8 +546,8 @@ select {
 input:focus,
 textarea:focus,
 select:focus {
-    border-color: rgba(255, 255, 255, 0.3);
-    background-color: rgba(255, 255, 255, 0.05);
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 input::placeholder,
@@ -555,14 +565,14 @@ textarea::placeholder {
 }
 
 .alert.success {
-    background-color: rgba(16, 185, 129, 0.1);
-    color: #34d399;
-    border: 1px solid rgba(16, 185, 129, 0.2);
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
 }
 
 .alert.error {
-    background-color: rgba(239, 68, 68, 0.1);
-    color: #f87171;
+    background-color: #fee2e2;
+    color: #991b1b;
     border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
@@ -587,7 +597,7 @@ textarea::placeholder {
     border-radius: var(--radius-lg);
     padding: 40px 32px;
     border: 1px solid var(--border-color);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .auth-card h1 {
@@ -655,7 +665,7 @@ textarea::placeholder {
     border-radius: var(--radius-lg);
     padding: 40px 32px;
     border: 1px solid var(--border-color);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     animation: slideUp 0.4s ease-out;
 }
 
@@ -711,7 +721,7 @@ textarea::placeholder {
 }
 
 .big-input {
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--input-bg);
     border: 1px solid var(--border-color);
     border-radius: var(--radius);
     color: var(--text-primary);
@@ -725,8 +735,8 @@ textarea::placeholder {
 }
 
 .big-input:focus {
-    background: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .big-input::placeholder {
@@ -818,7 +828,7 @@ textarea::placeholder {
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(4px);
     animation: fadeIn 0.2s;
 }
@@ -852,7 +862,7 @@ textarea::placeholder {
 
 /* Pre/Code blocks */
 pre {
-    background: rgba(0, 0, 0, 0.3);
+    background: #f8fafc;
     padding: 16px;
     border-radius: var(--radius);
     border: 1px solid var(--border-color);
@@ -1150,13 +1160,15 @@ tr:hover td {
         top: 16px;
         right: 16px;
         z-index: 1001;
-        background: rgba(0,0,0,0.3);
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
         width: 40px;
         height: 40px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     /* Auth pages */
@@ -1231,8 +1243,8 @@ tr:hover td {
     right: 20px;
     width: 44px;
     height: 44px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 50%;
     color: var(--text-secondary);
     font-size: 20px;
@@ -1242,12 +1254,14 @@ tr:hover td {
     justify-content: center;
     transition: all 0.2s ease;
     z-index: 2001;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .wizard-close-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: #f8fafc;
     color: var(--text-primary);
     transform: rotate(90deg);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Wizard Question & Hint */

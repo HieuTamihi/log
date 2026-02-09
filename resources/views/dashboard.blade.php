@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Leverage Fluency')
+@section('title', 'System Sight - Business Machine')
 
 @section('content')
 <div class="container">
@@ -22,8 +22,8 @@
     @endif
 
     <!-- Page Header -->
-    <h1 class="page-title">Leverage Fluency</h1>
-    <p class="page-subtitle">Ghi lại vấn đề lặp lại</p>
+    <h1 class="page-title">System Sight</h1>
+    <p class="page-subtitle">See it. Build it. Improve it.</p>
 
     @if ($countLogged > 0)
         <!-- Stats Dashboard - Only show if there are problems -->

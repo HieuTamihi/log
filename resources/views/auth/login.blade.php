@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Đăng Nhập - Leverage Fluency')
+@section('title', 'Đăng Nhập - System Sight')
 
 @section('body-class', 'auth-page')
 
@@ -9,7 +9,7 @@
     <div class="auth-card">
         <h1>Đăng Nhập</h1>
         <p class="auth-subtitle">
-            Đăng nhập để quản lý Vấn Đề & Giải Pháp
+            Đăng nhập vào System Sight
         </p>
 
         @if (session('success'))

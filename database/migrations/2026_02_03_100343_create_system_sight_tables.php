@@ -56,8 +56,16 @@ return new class extends Migration
         Schema::create('upgrades', function (Blueprint $table) {
             $table->id();
             $table->foreignId('component_id')->constrained()->cascadeOnDelete();
-            $table->unsignedInteger('user_id');
+            
+            // Dynamic user_id type to match users table
+            $userType = Schema::getColumnType('users', 'id');
+            if ($userType === 'bigint') {
+                $table->unsignedBigInteger('user_id');
+            } else {
+                $table->unsignedInteger('user_id');
+            }
             $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            
             $table->string('name'); // "Hook Writing Upgrade"
             $table->text('purpose')->nullable(); // What this upgrade is for
             $table->text('trigger')->nullable(); // When to use this upgrade
@@ -71,8 +79,16 @@ return new class extends Migration
         // 5. Streaks - Track user momentum
         Schema::create('streaks', function (Blueprint $table) {
             $table->id();
-            $table->unsignedInteger('user_id');
+            
+            // Dynamic user_id type
+            $userType = Schema::getColumnType('users', 'id');
+            if ($userType === 'bigint') {
+                $table->unsignedBigInteger('user_id');
+            } else {
+                $table->unsignedInteger('user_id');
+            }
             $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+            
             $table->integer('current_streak')->default(0); // Weeks
             $table->integer('longest_streak')->default(0);
             $table->date('last_ship_date')->nullable();

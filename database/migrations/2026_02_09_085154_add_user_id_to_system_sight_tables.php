@@ -11,21 +11,36 @@ return new class extends Migration
      */
     public function up(): void
     {
+        $userType = Schema::getColumnType('users', 'id');
+        $isBigInt = $userType === 'bigint';
+
         // Add user_id to machines table
-        Schema::table('machines', function (Blueprint $table) {
-            $table->unsignedInteger('user_id')->nullable()->after('id');
+        Schema::table('machines', function (Blueprint $table) use ($isBigInt) {
+            if ($isBigInt) {
+                $table->unsignedBigInteger('user_id')->nullable()->after('id');
+            } else {
+                $table->unsignedInteger('user_id')->nullable()->after('id');
+            }
             $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
         });
 
         // Add user_id to subsystems table
-        Schema::table('subsystems', function (Blueprint $table) {
-            $table->unsignedInteger('user_id')->nullable()->after('id');
+        Schema::table('subsystems', function (Blueprint $table) use ($isBigInt) {
+            if ($isBigInt) {
+                $table->unsignedBigInteger('user_id')->nullable()->after('id');
+            } else {
+                $table->unsignedInteger('user_id')->nullable()->after('id');
+            }
             $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
         });
 
         // Add user_id to components table
-        Schema::table('components', function (Blueprint $table) {
-            $table->unsignedInteger('user_id')->nullable()->after('id');
+        Schema::table('components', function (Blueprint $table) use ($isBigInt) {
+            if ($isBigInt) {
+                $table->unsignedBigInteger('user_id')->nullable()->after('id');
+            } else {
+                $table->unsignedInteger('user_id')->nullable()->after('id');
+            }
             $table->foreign('user_id')->references('id')->on('users')->nullOnDelete();
         });
     }

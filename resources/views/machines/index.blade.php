@@ -11,7 +11,7 @@
     <x-navbar />
     
     <!-- Floating Action Button -->
-    <a href="{{ route('machines.create') }}" class="fab-btn" title="{{ __('messages.create_machine') }}">
+    <a href="{{ route('machines.create') }}" class="fab-btn" title="Create Machine">
         <i class="fas fa-plus"></i>
     </a>
 
@@ -25,67 +25,39 @@
                 </div>
             </div>
 
-            <div style="margin-bottom: 24px;">
-                @if($streak && $streak->current_streak > 0)
-                <div class="streak-badge">
-                    <span class="streak-icon">🔥</span>
-                    <span class="streak-text">{{ __('messages.streak') }}: <strong>{{ $streak->current_streak }}</strong> {{ $streak->current_streak === 1 ? __('messages.week') : __('messages.weeks') }} {{ __('messages.shipping_upgrades') }}</span>
+            <!-- Zoom Controls -->
+            @if($machines->count() > 0)
+            <div class="zoom-controls-wrapper">
+                <div class="zoom-controls-row">
+                    <button onclick="toggleZoomView()" class="zoom-toggle-btn" id="zoomToggleBtn">
+                        <i class="fas fa-search-minus" id="zoomIcon"></i>
+                        <span id="zoomText">{{ __('messages.overview') }}</span>
+                    </button>
+
                 </div>
-                @endif
+                <div class="zoom-hint">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Hold Ctrl/Cmd + Scroll to zoom</span>
+                </div>
             </div>
 
-            <!-- Ship Upgrade Button -->
-            <div class="main-action">
-                <div class="quick-ship-wrapper">
-                    <button class="btn-ship" onclick="toggleQuickShip()">
-                        <i class="fas fa-bolt"></i>
-                        <span>{{ __('messages.ship_an_upgrade') }}</span>
-                        <i class="fas fa-chevron-down"></i>
-                    </button>
-                    
-                    <!-- Quick Ship Dropdown -->
-                    <div class="quick-ship-dropdown" id="quickShipDropdown">
-                        <div class="quick-ship-header">
-                            <h4>{{ __('messages.quick_ship') }}</h4>
-                            <p>{{ __('messages.components_need_attention') }}</p>
-                        </div>
-                        <div class="quick-ship-list">
-                            @php
-                                $needsAttention = \App\Models\Component::whereIn('health_status', ['on_fire', 'needs_love'])
-                                    ->with(['subsystem.machine'])
-                                    ->orderByRaw("FIELD(health_status, 'on_fire', 'needs_love')")
-                                    ->limit(5)
-                                    ->get();
-                            @endphp
-                            
-                            @forelse($needsAttention as $component)
-                            <a href="{{ route('upgrades.create', $component->id) }}" class="quick-ship-item">
-                                <div class="quick-ship-icon {{ $component->health_status === 'on_fire' ? 'danger' : 'warning' }}">
-                                    <i class="fas {{ $component->health_status === 'on_fire' ? 'fa-fire' : 'fa-heart' }}"></i>
-                                </div>
-                                <div class="quick-ship-info">
-                                    <div class="quick-ship-name">{{ $component->name }}</div>
-                                    <div class="quick-ship-path">{{ $component->subsystem->machine->name }} → {{ $component->subsystem->name }}</div>
-                                </div>
-                                <i class="fas fa-chevron-right quick-ship-arrow"></i>
-                            </a>
-                            @empty
-                            <div class="quick-ship-empty">
-                                <i class="fas fa-check-circle"></i>
-                                <p>{{ __('messages.all_components_smooth') }}</p>
-                                <small>{{ __('messages.browse_machines') }}</small>
-                            </div>
-                            @endforelse
-                        </div>
-                    </div>
-                </div>
+            <!-- Zoom Level Indicator -->
+            <div class="zoom-level-indicator" id="zoomLevelIndicator">
+                Zoom: <span id="zoomPercentage">100</span>%
             </div>
+            @endif
 
             <!-- Machine Flow Visualization -->
-            <div class="machine-flow-wrapper">
-                <div class="machine-flow">
+            <div class="machine-flow-wrapper" id="machineFlowWrapper">
+                <!-- Connection Canvas -->
+                <canvas id="connectionCanvas" class="connection-canvas"></canvas>
+                
+                <div class="machine-flow" id="machineFlow">
                     @foreach($machines as $index => $machine)
-                    <div class="machine-card" style="animation-delay: {{ $index * 0.15 }}s">
+                    <div class="machine-card" 
+                         data-machine-id="{{ $machine->id }}"
+                         style="animation-delay: {{ $index * 0.15 }}s; cursor: pointer;"
+                         onclick="window.location.href='{{ route('machines.show', $machine->slug) }}'">
                         <!-- Card Glow Effect -->
                         <div class="card-glow"></div>
 
@@ -97,14 +69,14 @@
                             <div class="card-menu-dropdown" id="cardMenu{{ $machine->id }}">
                                 <a href="{{ route('machines.edit', $machine) }}" class="card-menu-item edit">
                                     <i class="fas fa-edit"></i>
-                                    <span>Chỉnh sửa</span>
+                                    <span>Edit</span>
                                 </a>
-                                <form action="{{ route('machines.destroy', $machine) }}" method="POST" onsubmit="return confirm('{{ __('messages.confirm_delete_machine') }}')">
+                                <form action="{{ route('machines.destroy', $machine) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this machine?')">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="card-menu-item danger">
                                         <i class="fas fa-trash"></i>
-                                        <span>Xóa</span>
+                                        <span>Delete</span>
                                     </button>
                                 </form>
                             </div>
@@ -112,93 +84,117 @@
 
 
                         <h3 class="machine-name">{{ $machine->name }}</h3>
-                        <p class="machine-description">{{ $machine->description }}</p>
+                        @if($machine->sub_header || $machine->description)
+                            <div class="machine-sub-header" style="font-size: 14px; color: #6366f1; margin-bottom: 4px; font-weight: 500;">{{ $machine->sub_header ?? $machine->description }}</div>
+                        @endif
+                        <p class="machine-description">{{ $machine->detail_description }}</p>
 
                         <!-- Machine Metrics -->
                         <div class="machine-metrics">
                             @php
-                                $componentsCount = $machine->components->count();
-                                $onFireCount = $machine->components->where('health_status', 'on_fire')->count();
-                                $needsLoveCount = $machine->components->where('health_status', 'needs_love')->count();
-                                // Get first component with metric for display
-                                $componentWithMetric = $machine->components->first(function($c) {
-                                    return $c->metric_value && $c->metric_label;
-                                });
-                                // Get first component with current_issue
-                                $componentWithIssue = $machine->components->first(function($c) {
-                                    return $c->current_issue;
-                                });
+                                $status = $machine->health_status;
+                                $icon = $machine->status_icon;
+                                $colorClass = match($status) {
+                                    'green', 'smooth' => 'success',
+                                    'red', 'on_fire' => 'danger',
+                                    'yellow', 'needs_love' => 'warning',
+                                    default => 'secondary'
+                                };
+                                $statusText = match($status) {
+                                    'green', 'smooth' => 'Smooth',
+                                    'red', 'on_fire' => 'On Fire',
+                                    'yellow', 'needs_love' => 'Needs Love',
+                                    default => 'Unknown'
+                                };
                             @endphp
                             
-                            @if($onFireCount > 0)
-                                <div class="metric-badge danger">
-                                    <span class="metric-icon">🔥</span>
-                                    <span>{{ $onFireCount }} {{ __('messages.on_fire') }}</span>
-                                </div>
-                            @elseif($needsLoveCount > 0)
-                                <div class="metric-badge warning">
-                                    <span class="metric-icon">💛</span>
-                                    <span>{{ __('messages.needs_love') }}</span>
-                                </div>
-                            @else
-                                <div class="metric-badge success">
-                                    <span class="metric-icon">✅</span>
-                                    <span>{{ __('messages.smooth') }}</span>
-                                </div>
-                            @endif
+                            <div id="machine-status-badge-{{ $machine->id }}" class="metric-badge {{ $colorClass }}">
+                                <span class="metric-icon">{{ $icon }}</span>
+                            </div>
                         </div>
 
-                        <!-- Action Button -->
-                        <a href="{{ route('machines.show', $machine->slug) }}" class="btn-upgrade">
-                            <span>{{ __('messages.upgrade') }}</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </a>
-
-                        @if(!$loop->last)
-                        <div class="flow-arrow">
-                            <i class="fas fa-chevron-right"></i>
+                        <!-- Subsystems (visible when zoomed out) -->
+                        <div class="subsystems-container">
+                            @foreach($machine->subsystems as $subsystem)
+                            <a href="{{ route('subsystems.show', [$machine->slug, $subsystem->slug]) }}" class="subsystem-node" onclick="event.stopPropagation()">
+                                <span class="subsystem-icon">{{ $subsystem->icon ?? '📦' }}</span>
+                                <span class="subsystem-name">{{ $subsystem->name }}</span>
+                                <span class="subsystem-health health-{{ $subsystem->health_status }}"></span>
+                            </a>
+                            @endforeach
                         </div>
-                        @endif
                     </div>
                     @endforeach
-                </div>
-            </div>
-
-            <!-- Next Upgrades Section -->
-            <div class="next-upgrades">
-                <h3 class="section-title">{{ __('messages.next_upgrades') }}</h3>
-                <div class="upgrade-chips">
-                    @php
-                        $pendingUpgrades = \App\Models\Upgrade::where('status', '!=', 'shipped')
-                            ->with('component')
-                            ->orderBy('created_at', 'desc')
-                            ->limit(4)
-                            ->get();
-                    @endphp
-                    
-                    @forelse($pendingUpgrades as $upgrade)
-                    <a href="{{ route('upgrades.edit', $upgrade) }}" class="chip">
-                        <span class="chip-icon">{{ $upgrade->status === 'active' ? '⚡' : '✨' }}</span>
-                        <span>{{ Str::limit($upgrade->title, 25) }}</span>
-                    </a>
-                    @empty
-                    <span class="chip chip-empty">
-                        <span class="chip-icon">📝</span>
-                        <span>{{ __('messages.no_pending_upgrades') }}</span>
-                    </span>
-                    @endforelse
-                    
-                    <button class="chip chip-add" onclick="{{ $needsAttention->first() ? "window.location.href='" . route('upgrades.create', $needsAttention->first()->id) . "'" : "alert('" . __('messages.all_components_smooth') . "')" }}">
-                        <i class="fas fa-plus"></i>
-                    </button>
                 </div>
             </div>
         </div>
     </main>
 </div>
 
+<!-- Machine Context Menu -->
+<div id="machineContextMenu" class="context-menu">
+    <div class="context-menu-item" onclick="updateMachineStatus('green')">
+        <span class="status-dot dot-green"></span>
+        <span>Green</span>
+    </div>
+    <div class="context-menu-item" onclick="updateMachineStatus('yellow')">
+        <span class="status-dot dot-yellow"></span>
+        <span>Yellow</span>
+    </div>
+    <div class="context-menu-item" onclick="updateMachineStatus('red')">
+        <span class="status-dot dot-red"></span>
+        <span>Red</span>
+    </div>
+     <div class="context-menu-separator"></div>
+    <div class="context-menu-item" onclick="updateMachineStatus('auto')">
+        <span class="status-dot dot-auto">⚙️</span>
+        <span>Auto</span>
+    </div>
+</div>
+
+
+
 @push('styles')
 <style>
+    /* Additions for subsystem node health colors */
+    .subsystem-health.health-green, .subsystem-health.health-smooth { background-color: #10b981; }
+    .subsystem-health.health-red, .subsystem-health.health-on_fire { background-color: #ef4444; }
+    .subsystem-health.health-yellow, .subsystem-health.health-needs_love { background-color: #fbbf24; }
+
+    /* Context Menu */
+    .context-menu {
+        display: none;
+        position: fixed;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 9999;
+        min-width: 160px;
+        overflow: hidden;
+        padding: 4px;
+    }
+    .context-menu.show { display: block; animation: fadeIn 0.1s ease-out; }
+    .context-menu-item {
+        padding: 10px 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: background 0.2s;
+        font-weight: 500;
+        color: #475569;
+    }
+    .context-menu-item:hover { background: #f1f5f9; color: #1a202c; }
+    .context-menu-separator { height: 1px; background: #e2e8f0; margin: 4px 0; }
+    .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+    .dot-green { background: #10b981; }
+    .dot-yellow { background: #fbbf24; }
+    .dot-red { background: #ef4444; }
+    .dot-auto { background: none; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+    @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
     * {
         margin: 0;
         padding: 0;
@@ -972,15 +968,241 @@
         color: #94a3b8;
     }
 
+    /* ===== ZOOM CONTROLS ===== */
+    .zoom-controls-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 32px;
+    }
+
+    .zoom-controls-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .zoom-toggle-btn, .connection-mode-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: white;
+        color: #64748b;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 10px 20px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .zoom-toggle-btn:hover, .connection-mode-btn:hover {
+        background: #f8fafc;
+        border-color: #6366f1;
+        color: #6366f1;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+    }
+
+    .connection-mode-btn.active {
+        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        color: white;
+        border-color: transparent;
+    }
+
+    .zoom-toggle-btn i, .connection-mode-btn i {
+        font-size: 16px;
+    }
+
+    /* Connection Canvas */
+    .connection-canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: 5;
+        transform-origin: top center;
+    }
+
+    /* Machine cards in connection mode */
+    .connection-mode .machine-card {
+        cursor: crosshair;
+        position: relative;
+        z-index: 10;
+    }
+
+    .connection-mode .machine-card:hover {
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.3);
+    }
+
+    .connection-mode .machine-card.connecting {
+        box-shadow: 0 0 0 3px #6366f1;
+    }
+
+    /* Ensure machine flow has proper stacking */
+    .machine-flow {
+        position: relative;
+        z-index: 10;
+    }
+
+    .zoom-hint {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #94a3b8;
+        padding: 6px 12px;
+        background: rgba(148, 163, 184, 0.1);
+        border-radius: 6px;
+    }
+
+    .zoom-hint i {
+        font-size: 12px;
+    }
+
+    /* Zoom level indicator */
+    .zoom-level-indicator {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+        z-index: 1000;
+    }
+
+    .zoom-level-indicator.show {
+        opacity: 1;
+    }
+
+    /* ===== SUBSYSTEMS CONTAINER ===== */
+    .subsystems-container {
+        display: none;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .subsystem-node {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: rgba(99, 102, 241, 0.05);
+        border: 1px solid rgba(99, 102, 241, 0.1);
+        border-radius: 8px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .subsystem-node::before {
+        content: '';
+        position: absolute;
+        left: -20px;
+        top: 50%;
+        width: 20px;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.3));
+    }
+
+    .subsystem-node:hover {
+        background: rgba(99, 102, 241, 0.1);
+        border-color: rgba(99, 102, 241, 0.3);
+        transform: translateX(4px);
+    }
+
+    .subsystem-icon {
+        font-size: 16px;
+        line-height: 1;
+    }
+
+    .subsystem-name {
+        flex: 1;
+        font-size: 13px;
+        font-weight: 500;
+        color: #1a202c;
+    }
+
+    .subsystem-health {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .subsystem-health.health-smooth {
+        background: #10b981;
+        box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+    }
+
+    .subsystem-health.health-needs_love {
+        background: #f59e0b;
+        box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+    }
+
+    .subsystem-health.health-on_fire {
+        background: #ef4444;
+        box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+        animation: pulse 2s infinite;
+    }
+
+    /* ===== ZOOM OUT VIEW ===== */
+    .machine-flow-wrapper.zoomed-out {
+        perspective: 1000px;
+    }
+
+    /* Show subsystems when zoomed out */
+    .machine-flow.overview-mode .subsystems-container {
+        display: flex;
+    }
+
+    .machine-flow.overview-mode .machine-metrics {
+        display: none;
+    }
+
+    .machine-flow.overview-mode .machine-card {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .machine-flow.overview-mode .machine-card:hover {
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        z-index: 10;
+    }
+
     /* ===== MACHINE FLOW ===== */
     .machine-flow-wrapper {
         margin-bottom: 56px;
+        transition: all 0.4s ease;
+        overflow: visible;
+        position: relative;
+        min-height: 500px;
     }
 
     .machine-flow {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-        gap: 50px;
+        position: relative;
+        width: 100%;
+        min-height: 80vh;
+        padding: 40px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 80px; /* Space for arrows */
+        align-items: flex-start;
+        justify-content: center;
     }
 
     @media (min-width: 1200px) {
@@ -992,11 +1214,16 @@
     .machine-card {
         background: white;
         border-radius: 16px;
-        padding: 28px;
-        position: relative;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        padding: 24px;
+        position: relative; /* Relative for internal elements */
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         border: 1px solid #e2e8f0;
         transition: all 0.3s;
+        min-width: 350px;
+        width: 350px;
+        display: flex;
+        flex-direction: column;
+        z-index: 2; /* Above canvas */
     }
 
     .machine-card:hover {
@@ -1136,56 +1363,8 @@
         box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
     }
 
-    /* Flow Arrow Connector between cards */
-    .flow-arrow {
-        position: absolute;
-        right: -41px;
-        top: 50%;
-        transform: translateY(-50%);
-        z-index: 10;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .flow-arrow i {
-        width: 32px;
-        height: 32px;
-        background: white;
-        border: 2px solid #e2e8f0;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;
-        color: #6366f1;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-
     .machine-card {
         position: relative;
-    }
-
-    /* Connector line before arrow */
-    .flow-arrow::before {
-        content: '';
-        position: absolute;
-        right: 100%;
-        top: 50%;
-        width: 12px;
-        height: 2px;
-        background: linear-gradient(90deg, transparent, #e2e8f0);
-    }
-
-    /* Connector line after arrow */
-    .flow-arrow::after {
-        content: '';
-        position: absolute;
-        left: 100%;
-        top: 50%;
-        width: 12px;
-        height: 2px;
-        background: linear-gradient(90deg, #e2e8f0, transparent);
     }
 
     /* ===== NEXT UPGRADES ===== */
@@ -1394,26 +1573,221 @@
 
 @push('scripts')
 <script>
-    function toggleQuickShip() {
-        const dropdown = document.getElementById('quickShipDropdown');
-        dropdown.classList.toggle('show');
+    // Ordered Flow Logic
+    let machines = []; // Will be populated from DOM
+    let canvas, ctx;
+    let resizeObserver;
+
+    // Load notification count on page load
+    window.addEventListener('load', function() {
+        initializeFlow();
+    });
+
+    function initializeFlow() {
+        console.log('Initializing ordered flow...');
         
-        // Close other dropdowns
-        const notifDropdown = document.getElementById('notificationDropdown');
-        const userDropdown = document.getElementById('userDropdown');
-        if (notifDropdown) notifDropdown.classList.remove('show');
-        if (userDropdown) userDropdown.classList.remove('show');
+        // Notification logic
+        fetch('/notifications')
+            .then(res => res.json())
+            .then(data => updateNotificationBadge(data.unread_count))
+            .catch(err => console.error('Error loading notification count:', err));
+
+        // Setup canvas
+        canvas = document.getElementById('connectionCanvas');
+        if (canvas) {
+            ctx = canvas.getContext('2d');
+            window.addEventListener('resize', updateLayout);
+            
+            // Use ResizeObserver for more robust updates
+            resizeObserver = new ResizeObserver(() => {
+                updateLayout();
+            });
+            resizeObserver.observe(document.getElementById('machineFlow'));
+            
+            // Initial draw
+            setTimeout(updateLayout, 100);
+        }
     }
 
+        function updateLayout() {
+        if (!canvas || !ctx) return;
+
+        const container = document.getElementById('machineFlow');
+        if (!container) return;
+
+        // Resize canvas to match container content width/height
+        // Using scrollWidth/Height ensures we cover if content overflows
+        canvas.width = container.scrollWidth;
+        canvas.height = container.scrollHeight;
+        
+        drawOrderedConnections();
+    }
+
+        function drawOrderedConnections() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Remove existing swap buttons
+        document.querySelectorAll('.swap-btn').forEach(btn => btn.remove());
+
+        const cards = Array.from(document.querySelectorAll('.machine-card'));
+        if (cards.length < 2) return;
+
+        // Note: We use offsetLeft/Top which are relative to the offsetParent (machineFlow)
+        // This gives us unscaled coordinates within the container.
+        
+        for (let i = 0; i < cards.length - 1; i++) {
+            const current = cards[i];
+            const next = cards[i + 1];
+
+            // Calculate center points relative to container (unscaled)
+            const x1 = current.offsetLeft + current.offsetWidth / 2;
+            const y1 = current.offsetTop + current.offsetHeight / 2;
+            const x2 = next.offsetLeft + next.offsetWidth / 2;
+            const y2 = next.offsetTop + next.offsetHeight / 2;
+
+            // Draw Arrow
+            drawArrow(x1, y1, x2, y2, '#6366f1');
+
+            // Add Swap Button at midpoint
+            const midX = (x1 + x2) / 2;
+            const midY = (y1 + y2) / 2;
+            
+            createSwapButton(midX, midY, current.dataset.machineId, next.dataset.machineId);
+        }
+    }
+
+
+    function drawArrow(x1, y1, x2, y2, color) {
+        const headlen = 12;
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = 2;
+        
+        // Line
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+
+        // Arrowhead (at 60% of path to avoid overlap with button or card)
+        // Let's put it near the end but before the next card?
+        // Actually, midpoint is where button is. Let's put arrow head near target.
+        // We need to stop short of the target card.
+        // Approx distance to stop: half card width/height.
+        // Simple approach: standard arrowhead at end, obscured by card is fine if z-index is right?
+        // No, canvas is behind. So line goes to center.
+        // Let's just draw arrowhead slightly before the center of target card.
+        
+        const dist = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+        // Stop 175px short (half width) approx
+        const t = Math.max(0.1, 1 - (180 / dist)); 
+        
+        const arrX = x1 + (x2 - x1) * t;
+        const arrY = y1 + (y2 - y1) * t;
+
+        ctx.beginPath();
+        ctx.moveTo(arrX, arrY);
+        ctx.lineTo(arrX - headlen * Math.cos(angle - Math.PI / 6), arrY - headlen * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(arrX - headlen * Math.cos(angle + Math.PI / 6), arrY - headlen * Math.sin(angle + Math.PI / 6));
+        ctx.fill();
+    }
+
+    function createSwapButton(x, y, id1, id2) {
+        const btn = document.createElement('button');
+        btn.className = 'swap-btn';
+        btn.innerHTML = '<i class="fas fa-exchange-alt"></i>';
+        btn.title = 'Swap Order';
+        btn.style.position = 'absolute';
+        btn.style.left = x + 'px';
+        btn.style.top = y + 'px';
+        btn.style.transform = 'translate(-50%, -50%)';
+        btn.style.zIndex = '20';
+        btn.style.padding = '8px';
+        btn.style.borderRadius = '50%';
+        btn.style.border = '1px solid #e2e8f0';
+        btn.style.background = 'white';
+        btn.style.color = '#64748b';
+        btn.style.cursor = 'pointer';
+        btn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+        btn.style.transition = 'all 0.2s';
+
+        btn.onmouseover = () => {
+            btn.style.color = '#6366f1';
+            btn.style.borderColor = '#6366f1';
+            btn.style.transform = 'translate(-50%, -50%) scale(1.1)';
+        };
+        btn.onmouseout = () => {
+            btn.style.color = '#64748b';
+            btn.style.borderColor = '#e2e8f0';
+            btn.style.transform = 'translate(-50%, -50%) scale(1)';
+        };
+
+        btn.onclick = () => swapMachines(id1, id2);
+
+        document.getElementById('machineFlow').appendChild(btn);
+    }
+
+        async function swapMachines(id1, id2) {
+        // Optimistic UI Update
+        const card1 = document.querySelector(`.machine-card[data-machine-id="${id1}"]`);
+        const card2 = document.querySelector(`.machine-card[data-machine-id="${id2}"]`);
+
+        if (card1 && card2) {
+            const parent = card1.parentNode;
+            
+            // Swap based on position
+            if (card1.nextElementSibling === card2) {
+                parent.insertBefore(card2, card1);
+            } else if (card2.nextElementSibling === card1) {
+                parent.insertBefore(card1, card2);
+            } else {
+                // Generic swap if not adjacent (unlikely here but safe)
+                const folder = document.createElement('div');
+                parent.insertBefore(folder, card1);
+                parent.insertBefore(card1, card2);
+                parent.insertBefore(card2, folder);
+                folder.remove();
+            }
+            
+            // Redraw immediately
+            updateLayout(); 
+        }
+
+        try {
+            const response = await fetch('/machines/swap-order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({
+                    machine_id_1: id1,
+                    machine_id_2: id2
+                })
+            });
+
+            if (!response.ok) {
+                console.error('Swap failed on server');
+                // Revert or reload
+                window.location.reload(); 
+            }
+        } catch (error) {
+            console.error('Error swapping:', error);
+            window.location.reload();
+        }
+    }
+
+
+    // Keep Notification & Toggle Logic
     function toggleUserDropdown() {
         const dropdown = document.getElementById('userDropdown');
         dropdown.classList.toggle('show');
         
         // Close notifications if open
         const notifDropdown = document.getElementById('notificationDropdown');
-        const quickShipDropdown = document.getElementById('quickShipDropdown');
         if (notifDropdown) notifDropdown.classList.remove('show');
-        if (quickShipDropdown) quickShipDropdown.classList.remove('show');
     }
 
     function toggleNotifications() {
@@ -1422,9 +1796,7 @@
         
         // Close user dropdown if open
         const userDropdown = document.getElementById('userDropdown');
-        const quickShipDropdown = document.getElementById('quickShipDropdown');
         if (userDropdown) userDropdown.classList.remove('show');
-        if (quickShipDropdown) quickShipDropdown.classList.remove('show');
         
         // Load notifications if opening
         if (dropdown.classList.contains('show')) {
@@ -1434,6 +1806,7 @@
 
     async function loadNotifications() {
         const listEl = document.getElementById('notificationList');
+        if(!listEl) return;
         listEl.innerHTML = `
             <div class="notification-loading">
                 <i class="fas fa-spinner fa-spin"></i>
@@ -1571,8 +1944,6 @@
         const userDropdown = document.getElementById('userDropdown');
         const notifBtn = document.querySelector('.notification-btn');
         const notifDropdown = document.getElementById('notificationDropdown');
-        const quickShipBtn = document.querySelector('.btn-ship');
-        const quickShipDropdown = document.getElementById('quickShipDropdown');
         
         if (userMenu && userDropdown && !userMenu.contains(event.target) && !userDropdown.contains(event.target)) {
             userDropdown.classList.remove('show');
@@ -1580,10 +1951,6 @@
         
         if (notifBtn && notifDropdown && !notifBtn.contains(event.target) && !notifDropdown.contains(event.target)) {
             notifDropdown.classList.remove('show');
-        }
-        
-        if (quickShipBtn && quickShipDropdown && !quickShipBtn.contains(event.target) && !quickShipDropdown.contains(event.target)) {
-            quickShipDropdown.classList.remove('show');
         }
 
         // Close card menus when clicking outside
@@ -1596,11 +1963,114 @@
 
     // Load notification count on page load
     window.addEventListener('load', function() {
+        initializeFlow();
         fetch('/notifications')
             .then(res => res.json())
             .then(data => updateNotificationBadge(data.unread_count))
             .catch(err => console.error('Error loading notification count:', err));
     });
+
+    // Zoom View Toggle
+    let zoomLevel = 1.0; // 1.0 = 100%, 0.5 = 50%
+    const minZoom = 0.5;
+    const maxZoom = 1.5;
+    const zoomStep = 0.1;
+    let zoomTimeout;
+
+    function updateZoomDisplay() {
+        const flowWrapper = document.getElementById('machineFlowWrapper');
+        const flow = document.getElementById('machineFlow');
+        const canvas = document.getElementById('connectionCanvas');
+        const icon = document.getElementById('zoomIcon');
+        const text = document.getElementById('zoomText');
+        const indicator = document.getElementById('zoomLevelIndicator');
+        const percentage = document.getElementById('zoomPercentage');
+        
+        if (!flow) return;
+        
+        // Apply zoom transform to both flow and canvas
+        flow.style.transform = `scale(${zoomLevel})`;
+        flow.style.transformOrigin = 'top center';
+        flow.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        
+        // Scale canvas the same way
+        if (canvas) {
+            canvas.style.transform = `scale(${zoomLevel})`;
+            canvas.style.transformOrigin = 'top center';
+            canvas.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        }
+        
+        // Update button and show/hide subsystems
+        if (zoomLevel < 0.8) {
+            flow.classList.add('overview-mode');
+            flowWrapper.classList.add('zoomed-out');
+            icon.className = 'fas fa-search-plus';
+            text.textContent = '{{ __("messages.detail") }}';
+        } else {
+            flow.classList.remove('overview-mode');
+            flowWrapper.classList.remove('zoomed-out');
+            icon.className = 'fas fa-search-minus';
+            text.textContent = '{{ __("messages.overview") }}';
+        }
+        
+        // Show zoom indicator
+        percentage.textContent = Math.round(zoomLevel * 100);
+        indicator.classList.add('show');
+        
+        // Hide indicator after 1 second
+        clearTimeout(zoomTimeout);
+        zoomTimeout = setTimeout(() => {
+            indicator.classList.remove('show');
+        }, 1000);
+        
+        // Redraw connections after zoom animation
+        setTimeout(updateLayout, 350);
+    }
+
+    function toggleZoomView() {
+        if (zoomLevel < 0.8) {
+            zoomLevel = 1.0; // Zoom in to normal
+        } else {
+            zoomLevel = 0.6; // Zoom out to overview
+        }
+        updateZoomDisplay();
+    }
+
+    // Mouse wheel zoom
+    document.addEventListener('wheel', function(e) {
+        const flowWrapper = document.getElementById('machineFlowWrapper');
+        if (!flowWrapper) return;
+        
+        // Check if mouse is over the machine flow area
+        const rect = flowWrapper.getBoundingClientRect();
+        if (e.clientX >= rect.left && e.clientX <= rect.right &&
+            e.clientY >= rect.top && e.clientY <= rect.bottom) {
+            
+            // Prevent default scroll
+            if (e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                
+                // Zoom in/out
+                if (e.deltaY < 0) {
+                    // Scroll up - zoom in
+                    zoomLevel = Math.min(maxZoom, zoomLevel + zoomStep);
+                } else {
+                    // Scroll down - zoom out
+                    zoomLevel = Math.max(minZoom, zoomLevel - zoomStep);
+                }
+                
+                updateZoomDisplay();
+            }
+        }
+    }, { passive: false });
+
+    // Initialize zoom on page load
+    window.addEventListener('load', function() {
+        updateZoomDisplay();
+    });
+
+
+
 </script>
 @endpush
 @endsection

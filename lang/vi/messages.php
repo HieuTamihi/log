@@ -20,11 +20,13 @@ return [
     'upgrade' => 'Nâng cấp',
     'next_upgrades' => 'Cải tiến tiếp theo',
     'no_pending_upgrades' => 'Chưa có cải tiến nào đang chờ',
+    'overview' => 'Toàn cảnh',
+    'detail' => 'Chi tiết',
     
     // Health Status
-    'on_fire' => 'Đang cháy',
-    'needs_love' => 'Cần quan tâm',
-    'smooth' => 'Tốt',
+    'on_fire' => 'Nghiêm trọng',
+    'needs_love' => 'Cảnh báo',
+    'smooth' => 'Ổn định',
     'component' => 'thành phần',
     'components' => 'thành phần',
     
@@ -116,19 +118,4 @@ return [
     'component_deleted' => 'Xóa thành phần thành công!',
     'confirm_delete_component' => 'Bạn có chắc muốn xóa thành phần này? Tất cả cải tiến sẽ bị xóa.',
     'in_subsystem' => 'Trong Hệ Thống Con',
-    
-    // Additional
-    'no_pending_upgrades' => 'Chưa có cải tiến đang chờ',
-    
-    // Upgrade Editor
-    'draft' => 'Bản nháp',
-    'shipped' => 'Đã hoàn thành',
-    'ship_new_upgrade' => 'Tạo Cải Tiến Mới',
-    'ship_this_upgrade' => 'Ship Cải Tiến Này',
-    'shipped_on' => 'Đã hoàn thành vào',
-    'create_upgrade' => 'Tạo Cải Tiến',
-    'save' => 'Lưu',
-    'cancel' => 'Hủy',
-    'delete' => 'Xóa',
 ];
-

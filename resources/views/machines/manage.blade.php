@@ -29,7 +29,7 @@
                 <div class="header-actions">
                     <a href="{{ route('dashboard') }}" class="btn-secondary">
                         <i class="fas fa-arrow-left"></i>
-                        <span>{{ __('messages.back_to_dashboard') }}</span>
+                        <span>Back to Dashboard</span>
                     </a>
                     
                     <div class="user-menu" onclick="toggleUserDropdown()">
@@ -41,7 +41,7 @@
                             @csrf
                             <button type="submit" class="dropdown-item logout-btn">
                                 <i class="fas fa-sign-out-alt"></i>
-                                <span>{{ __('messages.logout') }}</span>
+                                <span>Logout</span>
                             </button>
                         </form>
                     </div>
@@ -59,7 +59,7 @@
                 </div>
                 <a href="{{ route('machines.create') }}" class="btn-primary">
                     <i class="fas fa-plus"></i>
-                    <span>{{ __('messages.create_machine') }}</span>
+                    <span>Create Machine</span>
                 </a>
             </div>
 
@@ -73,7 +73,8 @@
                     <div class="machine-list-icon">{{ $machine->icon }}</div>
                     <div class="machine-list-info">
                         <h3>{{ $machine->name }}</h3>
-                        <p>{{ $machine->description }}</p>
+                        <p class="text-sm text-indigo-500 font-medium">{{ $machine->sub_header ?? $machine->description }}</p>
+                        <p>{{ $machine->detail_description }}</p>
                         <div class="machine-list-meta">
                             <span>{{ $machine->subsystems->count() }} subsystems</span>
                             <span>•</span>
@@ -98,7 +99,7 @@
                     <p>Create your first business machine to get started</p>
                     <a href="{{ route('machines.create') }}" class="btn-primary" style="margin-top: 20px;">
                         <i class="fas fa-plus"></i>
-                        <span>{{ __('messages.create_machine') }}</span>
+                        <span>Create Machine</span>
                     </a>
                 </div>
                 @endforelse
@@ -392,6 +393,24 @@
         gap: 8px;
     }
 
+    .machine-card {
+        /* ... existing styles ... */
+        cursor: grab;
+        position: relative; /* Default, will be absolute if coords exist */
+        transition: transform 0.1s, box-shadow 0.2s; /* Smoother drag */
+    }
+
+    .machine-card:active {
+        cursor: grabbing;
+    }
+
+    .machine-card.dragging {
+        opacity: 0.8;
+        transform: scale(1.05);
+        z-index: 1000 !important;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+    
     .empty-state {
         text-align: center;
         padding: 80px 20px;

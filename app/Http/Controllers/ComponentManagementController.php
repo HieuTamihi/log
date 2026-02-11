@@ -21,7 +21,7 @@ class ComponentManagementController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'required|string',
             'icon' => 'nullable|string|max:50',
-            'health_status' => 'required|in:smooth,on_fire,needs_love',
+            'health_status' => 'required|in:smooth,on_fire,needs_love,green,red,yellow',
             'current_issue' => 'nullable|string',
             'metric_value' => 'nullable|integer',
             'metric_label' => 'nullable|string|max:50',
@@ -52,7 +52,7 @@ class ComponentManagementController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'required|string',
             'icon' => 'nullable|string|max:50',
-            'health_status' => 'required|in:smooth,on_fire,needs_love',
+            'health_status' => 'required|in:smooth,on_fire,needs_love,green,red,yellow',
             'current_issue' => 'nullable|string',
             'metric_value' => 'nullable|integer',
             'metric_label' => 'nullable|string|max:50',
@@ -67,6 +67,27 @@ class ComponentManagementController extends Controller
             'machineSlug' => $component->subsystem->machine->slug,
             'subsystemSlug' => $component->subsystem->slug
         ])->with('success', __('messages.component_updated'));
+    }
+
+    public function updateStatus(Request $request, Component $component)
+    {
+        $validated = $request->validate([
+            'health_status' => 'required|in:green,red,yellow,smooth,on_fire,needs_love',
+        ]);
+
+        $component->update(['health_status' => $validated['health_status']]);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => __('messages.component_updated'),
+                'component' => $component,
+                'new_status_color' => $component->status_color,
+                'new_status_icon' => $component->status_icon,
+            ]);
+        }
+
+        return back()->with('success', __('messages.component_updated'));
     }
 
     public function destroy(Component $component)

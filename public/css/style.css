@@ -1629,3 +1629,330 @@ tr:hover td {
         font-size: 14px;
     }
 }
+
+
+/* ===== ZOOM CONTROLS ===== */
+.zoom-controls {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin: 32px 0 24px;
+}
+
+.zoom-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--card-bg);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.zoom-btn:hover {
+    background: var(--card-bg-hover);
+    color: var(--text-primary);
+    border-color: #cbd5e1;
+}
+
+.zoom-btn.active {
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+}
+
+.zoom-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* ===== SYSTEM OVERVIEW - ZOOM OUT VIEW ===== */
+.system-overview {
+    margin-bottom: 40px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.system-map {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.machine-node {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.machine-node:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    border-color: #cbd5e1;
+}
+
+.machine-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.machine-icon {
+    font-size: 32px;
+    line-height: 1;
+}
+
+.machine-header h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.subsystems-mini {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.subsystem-mini {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.subsystem-mini:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.subsystem-mini-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.subsystem-mini-name {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.health-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.health-dot.health-smooth {
+    background: var(--success-color);
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+.health-dot.health-needs_love {
+    background: var(--warning-color);
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.4);
+}
+
+.health-dot.health-on_fire {
+    background: var(--danger-color);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.machine-stats {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
+}
+
+.machine-stats span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ===== MACHINES LIST - ZOOM IN VIEW ===== */
+.machines-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 40px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.machine-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 20px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: block;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.machine-card:hover {
+    background: var(--card-bg-hover);
+    border-color: #cbd5e1;
+    transform: translateX(4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.machine-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.machine-card-icon {
+    font-size: 40px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.machine-card-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 4px 0;
+}
+
+.machine-card-desc {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.machine-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.health-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
+.health-badge.health-smooth {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.health-badge.health-needs_love {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--warning-color);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.health-badge.health-on_fire {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger-color);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* ===== MOBILE RESPONSIVE FOR ZOOM ===== */
+@media screen and (max-width: 768px) {
+    .zoom-controls {
+        gap: 8px;
+        margin: 24px 0 20px;
+    }
+
+    .zoom-btn {
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+
+    .zoom-btn svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .system-map {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .machine-node {
+        padding: 16px;
+    }
+
+    .machine-header {
+        margin-bottom: 12px;
+        padding-bottom: 12px;
+    }
+
+    .machine-icon {
+        font-size: 28px;
+    }
+
+    .machine-header h3 {
+        font-size: 16px;
+    }
+
+    .machine-card {
+        padding: 16px;
+    }
+
+    .machine-card-icon {
+        font-size: 32px;
+    }
+
+    .machine-card-title {
+        font-size: 16px;
+    }
+
+    .machine-card-desc {
+        font-size: 13px;
+    }
+}

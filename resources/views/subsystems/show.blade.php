@@ -46,152 +46,67 @@
             </div>
             @endif
 
-            <!-- Components Grid -->
-            <div class="components-grid">
+            <!-- Components List (File System Style) -->
+            <div class="components-list">
+                <div class="list-header">
+                    <div class="col-name">Name</div>
+                    <div class="col-status">Status</div>
+                    <div class="col-updated">Last Updated</div>
+                    <div class="col-actions"></div>
+                </div>
+
                 @forelse($subsystem->components as $component)
-                <div class="component-card">
-                    <div class="component-header">
-                        <div class="component-status-badge status-{{ $component->health_status }}">
-                        @if($component->health_status === 'smooth')
-                            <span class="status-icon">✅</span>
-                            <span>{{ __('messages.smooth') }}</span>
-                        @elseif($component->health_status === 'on_fire')
-                            <span class="status-icon">🔥</span>
-                            <span>{{ __('messages.on_fire') }}</span>
-                        @else
-                            <span class="status-icon">💛</span>
-                            <span>{{ __('messages.needs_love') }}</span>
-                        @endif
+                <div class="component-item" onclick="window.location.href='{{ route('components.show', $component->id) }}'">
+                    <div class="col-name">
+                        <div class="file-icon">
+                            @if($component->icon)
+                                {{ $component->icon }}
+                            @else
+                                📄
+                            @endif
+                        </div>
+                        <div class="file-info">
+                            <span class="file-name">{{ $component->name }}</span>
+                            <span class="file-desc">{{ Str::limit($component->description, 50) }}</span>
                         </div>
                     </div>
-                    
-                    <h3 class="component-name">{{ $component->name }}</h3>
-                    <p class="component-description">{{ $component->description }}</p>
-
-                    <!-- Metric Display -->
-                    @if($component->metric_value && $component->metric_label)
-                    <div class="component-metric-display">
-                        <span class="metric-value">{{ $component->metric_value }}</span>
-                        <span class="metric-label">{{ $component->metric_label }}</span>
+                    <div class="col-status">
+                        <span class="status-badge status-{{ $component->health_status }}">
+                            {{ ucfirst(str_replace('_', ' ', $component->health_status)) }}
+                        </span>
                     </div>
-                    @endif
-
-                    <div class="component-upgrades">
-                        @php
-                            $upgradesCount = $component->upgrades->count();
-                            $activeUpgrades = $component->upgrades->where('status', 'active')->count();
-                        @endphp
-                        
-                        @if($upgradesCount > 0)
-                            <div class="upgrade-count">
-                                <i class="fas fa-bolt"></i>
-                                <span>{{ $upgradesCount }} {{ $upgradesCount === 1 ? 'upgrade' : 'upgrades' }}</span>
-                            </div>
-                        @endif
-
-                        @if($activeUpgrades > 0)
-                            <div class="active-badge">
-                                <span>{{ $activeUpgrades }} active</span>
-                            </div>
-                        @endif
+                    <div class="col-updated">
+                        {{ $component->updated_at->diffForHumans() }}
                     </div>
-
-                    <a href="{{ route('upgrades.create', $component->id) }}" class="btn-ship-upgrade">
-                        <i data-lucide="zap"></i>
-                        <span>Ship Upgrade</span>
-                    </a>
-
-                    <div style="display: flex; gap: 8px; margin-top: 12px; margin-bottom: 16px;">
-                        <a href="{{ route('components.edit', $component) }}" class="btn-secondary" style="flex: 1; justify-content: center; align-items: center; display: flex; gap: 8px;">
-                            <i data-lucide="edit-2" style="width: 16px; height: 16px;"></i>
-                            <span>{{ __('messages.edit_component') }}</span>
-                        </a>
-                        
-                        <form action="{{ route('components.destroy', $component) }}" method="POST" 
-                              onsubmit="return confirm('{{ __('messages.confirm_delete_component') }}')"
-                              style="display: inline-block;">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn-secondary" style="background: #fee2e2; color: #ef4444; border-color: #fecaca; height: 100%; padding: 0 16px;">
-                                <i data-lucide="trash-2">Xóa</i>
+                    <div class="col-actions" onclick="event.stopPropagation()">
+                        <div class="dropdown">
+                            <button class="btn-icon" onclick="toggleDropdown({{ $component->id }})">
+                                <i class="fas fa-ellipsis-h"></i>
                             </button>
-                        </form>
-                    </div>
-
-                    @if($component->upgrades->count() > 0)
-                    <div class="upgrades-list">
-                        <div class="upgrades-header">
-                            <span>Cải tiến ({{ $component->upgrades->count() }})</span>
-                        </div>
-                        @foreach($component->upgrades->sortByDesc('created_at') as $upgrade)
-                        <div class="upgrade-card">
-                            <div class="upgrade-card-header">
-                                <div class="upgrade-card-title">
-                                    <span class="upgrade-status-dot status-{{ $upgrade->status }}"></span>
-                                    <span class="upgrade-name">{{ $upgrade->name }}</span>
-                                </div>
-                                <div class="upgrade-card-meta">
-                                    <span class="upgrade-status-badge status-{{ $upgrade->status }}">
-                                        {{ $upgrade->status === 'shipped' ? '✅ Hoàn thành' : ($upgrade->status === 'active' ? '⚡ Đang làm' : '📝 Nháp') }}
-                                    </span>
-                                    <span class="upgrade-date">{{ $upgrade->created_at->diffForHumans() }}</span>
-                                </div>
-                            </div>
-                            <div class="upgrade-card-body">
-                                @if($upgrade->purpose)
-                                <div class="upgrade-section">
-                                    <strong>🎯 Mục đích:</strong>
-                                    <p>{{ $upgrade->purpose }}</p>
-                                </div>
-                                @endif
-                                
-                                @if($upgrade->trigger)
-                                <div class="upgrade-section">
-                                    <strong>⚡ Kích hoạt:</strong>
-                                    <p>{{ $upgrade->trigger }}</p>
-                                </div>
-                                @endif
-                                
-                                @if($upgrade->steps && count($upgrade->steps) > 0)
-                                <div class="upgrade-section">
-                                    <strong>📋 Các bước:</strong>
-                                    <ol class="upgrade-steps">
-                                        @foreach($upgrade->steps as $step)
-                                        <li>{{ $step }}</li>
-                                        @endforeach
-                                    </ol>
-                                </div>
-                                @endif
-                                
-                                @if($upgrade->definition_of_done)
-                                <div class="upgrade-section">
-                                    <strong>✅ Tiêu chí hoàn thành:</strong>
-                                    <p>{{ $upgrade->definition_of_done }}</p>
-                                </div>
-                                @endif
-                                
-                                @if($upgrade->shipped_at)
-                                <div class="upgrade-section shipped-info">
-                                    <strong>🚀 Hoàn thành:</strong> {{ $upgrade->shipped_at->format('d/m/Y H:i') }}
-                                </div>
-                                @endif
-                                
-                                <div class="upgrade-actions">
-                                    <a href="{{ route('upgrades.edit', $upgrade) }}" class="btn-sm btn-secondary">
-                                        <i class="fas fa-edit"></i> Chỉnh sửa
-                                    </a>
-                                </div>
+                            <div id="dropdown-{{ $component->id }}" class="dropdown-menu">
+                                <a href="{{ route('components.show', $component->id) }}" class="dropdown-item">
+                                    <i class="fas fa-eye"></i> Open
+                                </a>
+                                <a href="{{ route('components.edit', $component) }}" class="dropdown-item">
+                                    <i class="fas fa-edit"></i> Edit Properties
+                                </a>
+                                <form action="{{ route('components.destroy', $component) }}" method="POST" 
+                                      onsubmit="return confirm('{{ __('messages.confirm_delete_component') }}')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="dropdown-item text-red">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>
+                                </form>
                             </div>
                         </div>
-                        @endforeach
                     </div>
-                    @endif
                 </div>
                 @empty
                 <div class="empty-state">
-                    <div class="empty-icon">📦</div>
-                    <h3>No components yet</h3>
-                    <p>Components will appear here once they're added to this subsystem.</p>
+                    <div class="empty-icon">📂</div>
+                    <h3>Empty Folder</h3>
+                    <p>Create a component to start adding notes.</p>
                 </div>
                 @endforelse
             </div>
@@ -199,20 +114,75 @@
     </main>
 </div>
 
+<!-- Context Menu -->
+<div id="statusContextMenu" class="context-menu">
+    <div class="context-menu-item" onclick="updateComponentStatus('green')">
+        <span class="status-dot dot-green"></span>
+    </div>
+    <div class="context-menu-item" onclick="updateComponentStatus('yellow')">
+        <span class="status-dot dot-yellow"></span>
+    </div>
+    <div class="context-menu-item" onclick="updateComponentStatus('red')">
+        <span class="status-dot dot-red"></span>
+    </div>
+</div>
+
 @push('styles')
 <style>
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
+    /* ... (existing styles) ... */
+    /* Ensure existing styles are preserved */
+    /* Context Menu Styles */
+    .context-menu {
+        display: none;
+        position: fixed; /* Changed to fixed for viewport interaction */
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* Slightly stronger shadow */
+        z-index: 9999; /* Very high z-index */
+        min-width: 160px;
+        overflow: hidden;
+        padding: 4px;
     }
 
-    body {
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        background: #fafbfc;
-        color: #1a202c;
-        line-height: 1.6;
+    .context-menu.show {
+        display: block;
+        animation: fadeIn 0.1s ease-out;
     }
+
+    .context-menu-item {
+        padding: 10px 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: background 0.2s;
+        font-weight: 500;
+        color: #475569;
+    }
+
+    .context-menu-item:hover {
+        background: #f1f5f9;
+        color: #1a202c;
+    }
+
+    /* ... dots styles ... */
+    .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+
+    .dot-green { background: #10b981; }
+    .dot-yellow { background: #fbbf24; }
+    .dot-red { background: #ef4444; }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+
 
     .bg-gradient {
         position: fixed;
@@ -491,6 +461,32 @@
         color: #92400e;
     }
 
+    .component-status-badge.status-green {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .component-status-badge.status-red {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .component-status-badge.status-yellow {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    /* Context Menu Dot Styles */
+    .status-dot {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .dot-green { background-color: #10b981; }
+    .dot-yellow { background-color: #fbbf24; }
+    .dot-red { background-color: #ef4444; }
+
     .component-name {
         font-size: 22px;
         font-weight: 700;
@@ -716,10 +712,181 @@
         border-color: #cbd5e1;
     }
 
-    /* Upgrade Card Styles */
-    .upgrade-card {
-        background: #f8fafc;
+    /* File List Styles */
+    .components-list {
+        background: white;
+        border-radius: 16px;
         border: 1px solid #e2e8f0;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .list-header {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 60px;
+        padding: 16px 24px;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        font-weight: 600;
+        color: #64748b;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .component-item {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 60px;
+        padding: 16px 24px;
+        border-bottom: 1px solid #e2e8f0;
+        align-items: center;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .component-item:last-child {
+        border-bottom: none;
+    }
+
+    .component-item:hover {
+        background: #f8fafc;
+    }
+
+    .col-name {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .file-icon {
+        width: 40px;
+        height: 40px;
+        background: #eff6ff;
+        border-radius: 8px;
+        color: #6366f1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+
+    .file-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .file-name {
+        font-weight: 600;
+        color: #1a202c;
+        font-size: 15px;
+    }
+
+    .file-desc {
+        font-size: 13px;
+        color: #64748b;
+    }
+
+    .col-status {
+        display: flex;
+        align-items: center;
+    }
+
+    .status-badge {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: capitalize;
+    }
+
+    .status-smooth { background: #d1fae5; color: #065f46; }
+    .status-on_fire { background: #fee2e2; color: #991b1b; }
+    .status-needs_love { background: #fef3c7; color: #92400e; }
+    .status-green { background: #d1fae5; color: #065f46; }
+    .status-red { background: #fee2e2; color: #991b1b; }
+    .status-yellow { background: #fef3c7; color: #92400e; }
+
+    .col-updated {
+        color: #64748b;
+        font-size: 14px;
+    }
+
+    .col-actions {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .btn-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        border: none;
+        background: transparent;
+        color: #94a3b8;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+
+    .btn-icon:hover {
+        background: #f1f5f9;
+        color: #1a202c;
+    }
+
+    .dropdown {
+        position: relative;
+    }
+
+    .dropdown-menu {
+        position: absolute;
+        right: 0;
+        top: 100%;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        min-width: 180px;
+        z-index: 50;
+        display: none;
+        padding: 4px;
+    }
+
+    .dropdown-menu.show {
+        display: block;
+    }
+
+    .dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        text-decoration: none;
+        color: #475569;
+        font-size: 14px;
+        font-weight: 500;
+        border-radius: 6px;
+        border: none;
+        background: transparent;
+        width: 100%;
+        text-align: left;
+        cursor: pointer;
+    }
+
+    .dropdown-item:hover {
+        background: #f8fafc;
+        color: #1a202c;
+    }
+
+    .text-red {
+        color: #ef4444;
+    }
+    
+    .text-red:hover {
+        background: #fef2f2;
+    }
+
         border-radius: 12px;
         margin-bottom: 12px;
         cursor: pointer;
@@ -931,6 +1098,120 @@
 
 @push('scripts')
 <script>
+    let activeComponentId = null;
+    let touchTimer = null;
+    const contextMenu = document.getElementById('statusContextMenu');
+
+    // Hide context menu on click outside
+    document.addEventListener('click', (e) => {
+        // If clicking outside the menu, close it
+        if (!contextMenu.contains(e.target)) {
+            contextMenu.classList.remove('show');
+        }
+    });
+
+    // Also hide on scroll to avoid floating menu
+    document.addEventListener('scroll', () => {
+        contextMenu.classList.remove('show');
+    }, true);
+
+    function showContextMenu(event, componentId) {
+        event.preventDefault(); // CRITICAL: Stop browser menu
+        console.log('Opening Custom Context Menu for Component ' + componentId); 
+
+        activeComponentId = componentId;
+        
+        // Use clientX/Y for fixed positioning
+        // Check if we have pageX/Y (from touch shim) or fallback to clientX/Y
+        let x = event.clientX;
+        let y = event.clientY;
+
+        // If it's the mock event from touch, logic might differ slightly, but clientX works if we pass it correctly.
+        // For the touchShim below, we construct a mock event.
+        
+        // Adjust if menu goes off screen (basic check)
+        const menuWidth = 170;
+        const menuHeight = 130;
+        
+        if (x + menuWidth > window.innerWidth) {
+            x -= menuWidth;
+        }
+        
+        if (y + menuHeight > window.innerHeight) {
+            y -= menuHeight;
+        }
+        
+        contextMenu.style.left = `${x}px`;
+        contextMenu.style.top = `${y}px`;
+        contextMenu.classList.add('show');
+    }
+
+    function handleTouchStart(event, componentId) {
+        touchTimer = setTimeout(() => {
+            // Long press detected
+            const touch = event.touches[0];
+            const mockEvent = {
+                preventDefault: () => {},
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            };
+            showContextMenu(mockEvent, componentId);
+        }, 500); // 500ms long press
+    }
+
+    function handleTouchEnd(event) {
+        if (touchTimer) {
+            clearTimeout(touchTimer);
+            touchTimer = null;
+        }
+    }
+
+    function updateComponentStatus(status) {
+        if (!activeComponentId) return;
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        
+        // Optimistic UI Update
+        const badge = document.getElementById(`status-badge-${activeComponentId}`);
+        if(badge) {
+            // Remove old status classes
+            badge.classList.remove('status-smooth', 'status-on_fire', 'status-needs_love', 'status-green', 'status-red', 'status-yellow');
+            badge.classList.add(`status-${status}`);
+            
+            const iconSpan = badge.querySelector('.status-icon');
+            if (status === 'green') { icon = '🟢'; }
+            else if (status === 'yellow') { icon = '🟡'; }
+            else if (status === 'red') { icon = '🔴'; }
+
+            if(iconSpan) iconSpan.textContent = icon;
+        }
+
+        // Send Request
+        fetch(`/manage/components/${activeComponentId}/status`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({ health_status: status })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('Status updated successfully');
+            } else {
+                console.error('Failed to update status');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+
+        contextMenu.classList.remove('show');
+    }
+
+    // Existing scripts
     function toggleUserDropdown() {
         const dropdown = document.getElementById('userDropdown');
         dropdown.classList.toggle('show');
@@ -940,7 +1221,7 @@
         const userMenu = document.querySelector('.user-menu');
         const dropdown = document.getElementById('userDropdown');
         
-        if (!userMenu.contains(event.target) && !dropdown.contains(event.target)) {
+        if (userMenu && dropdown && !userMenu.contains(event.target) && !dropdown.contains(event.target)) {
             dropdown.classList.remove('show');
         }
     });

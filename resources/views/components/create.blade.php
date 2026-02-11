@@ -58,14 +58,14 @@
                             Trạng thái *
                         </label>
                         <select id="health_status" name="health_status" required>
-                            <option value="smooth" {{ old('health_status') == 'smooth' ? 'selected' : '' }}>
-                                ✅ Tốt
+                            <option value="green" {{ old('health_status') == 'green' ? 'selected' : '' }}>
+                                🟢 Ổn định
                             </option>
-                            <option value="needs_love" {{ old('health_status', 'needs_love') == 'needs_love' ? 'selected' : '' }}>
-                                💛 Cần quan tâm
+                            <option value="yellow" {{ old('health_status', 'yellow') == 'yellow' ? 'selected' : '' }}>
+                                🟡 Cảnh báo
                             </option>
-                            <option value="on_fire" {{ old('health_status') == 'on_fire' ? 'selected' : '' }}>
-                                🔥 Đang cháy
+                            <option value="red" {{ old('health_status') == 'red' ? 'selected' : '' }}>
+                                🔴 Nghiêm trọng
                             </option>
                         </select>
                         @error('health_status')

@@ -20,11 +20,13 @@ return [
     'upgrade' => 'Upgrade',
     'next_upgrades' => 'Next upgrades',
     'no_pending_upgrades' => 'No pending upgrades',
+    'overview' => 'Overview',
+    'detail' => 'Detail',
     
     // Health Status
-    'on_fire' => 'On fire',
-    'needs_love' => 'Needs love',
-    'smooth' => 'Smooth',
+    'on_fire' => 'Critical',
+    'needs_love' => 'Warning',
+    'smooth' => 'Normal',
     'component' => 'component',
     'components' => 'components',
     
@@ -68,7 +70,6 @@ return [
     'loading' => 'Loading...',
     
     // Subsystems
-    'subsystems' => 'subsystems',
     'recent_upgrades' => 'Recent upgrades',
     'view_details' => 'View Details',
     

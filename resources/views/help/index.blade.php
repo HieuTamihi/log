@@ -66,25 +66,25 @@
                 
                 <div class="status-list">
                     <div class="status-item status-fire">
-                        <span class="status-emoji">🔥</span>
+                        <span class="status-emoji">🔴</span>
                         <div>
-                            <strong>On Fire (Đang cháy)</strong>
+                            <strong>Nghiêm trọng (Critical)</strong>
                             <p>Có vấn đề nghiêm trọng, cần xử lý ngay!</p>
                         </div>
                     </div>
                     
                     <div class="status-item status-love">
-                        <span class="status-emoji">💛</span>
+                        <span class="status-emoji">🟡</span>
                         <div>
-                            <strong>Needs Love (Cần quan tâm)</strong>
+                            <strong>Cảnh báo (Warning)</strong>
                             <p>Đang hoạt động nhưng chưa tốt, cần cải thiện</p>
                         </div>
                     </div>
                     
                     <div class="status-item status-smooth">
-                        <span class="status-emoji">✅</span>
+                        <span class="status-emoji">🟢</span>
                         <div>
-                            <strong>Smooth (Trơn tru)</strong>
+                            <strong>Ổn định (Normal)</strong>
                             <p>Đang hoạt động tốt, không cần can thiệp</p>
                         </div>
                     </div>

@@ -43,6 +43,77 @@
         </div>
     @endif
 
+    <!-- Zoom Controls -->
+    @if($machines->count() > 0)
+    <div class="zoom-controls">
+        <button onclick="zoomOut()" class="zoom-btn" id="zoomOutBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+            Toàn cảnh
+        </button>
+        <button onclick="zoomIn()" class="zoom-btn active" id="zoomInBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                <line x1="11" y1="8" x2="11" y2="14"></line>
+                <line x1="8" y1="11" x2="14" y2="11"></line>
+            </svg>
+            Chi tiết
+        </button>
+    </div>
+
+    <!-- System Overview - Zoom Out View -->
+    <div id="zoomOutView" class="system-overview" style="display: none;">
+        <div class="system-map">
+            @foreach($machines as $machine)
+            <div class="machine-node" onclick="window.location.href='{{ route('machines.show', $machine->slug) }}'">
+                <div class="machine-header">
+                    <span class="machine-icon">{{ $machine->icon ?? '⚙️' }}</span>
+                    <h3>{{ $machine->name }}</h3>
+                </div>
+                <div class="subsystems-mini">
+                    @foreach($machine->subsystems as $subsystem)
+                    <div class="subsystem-mini" title="{{ $subsystem->name }}">
+                        <span class="subsystem-mini-icon">{{ $subsystem->icon ?? '📦' }}</span>
+                        <span class="subsystem-mini-name">{{ Str::limit($subsystem->name, 15) }}</span>
+                        <span class="health-dot health-{{ $subsystem->health_status }}"></span>
+                    </div>
+                    @endforeach
+                </div>
+                <div class="machine-stats">
+                    <span>{{ $machine->subsystems->count() }} subsystems</span>
+                    <span>{{ $machine->components->count() }} components</span>
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+
+    <!-- Zoom In View - Simple List -->
+    <div id="zoomInView" class="machines-list">
+        @foreach($machines as $machine)
+        <a href="{{ route('machines.show', $machine->slug) }}" class="machine-card">
+            <div class="machine-card-header">
+                <span class="machine-card-icon">{{ $machine->icon ?? '⚙️' }}</span>
+                <div>
+                    <h3 class="machine-card-title">{{ $machine->name }}</h3>
+                    <p class="machine-card-desc">{{ Str::limit($machine->description, 60) }}</p>
+                </div>
+            </div>
+            <div class="machine-card-footer">
+                <span class="badge">{{ $machine->subsystems->count() }} subsystems</span>
+                <span class="health-badge health-{{ $machine->health_status }}">
+                    {{ ucfirst(str_replace('_', ' ', $machine->health_status)) }}
+                </span>
+            </div>
+        </a>
+        @endforeach
+    </div>
+    @endif
+
     <!-- Main Content Area -->
     <div class="main-content-area">
         <!-- Hero Button - Tạo vấn đề mới -->
@@ -134,6 +205,25 @@
 
 @push('scripts')
 <script>
+    // Zoom functionality
+    let isZoomedOut = false;
+
+    function zoomOut() {
+        isZoomedOut = true;
+        document.getElementById('zoomOutView').style.display = 'block';
+        document.getElementById('zoomInView').style.display = 'none';
+        document.getElementById('zoomOutBtn').classList.add('active');
+        document.getElementById('zoomInBtn').classList.remove('active');
+    }
+
+    function zoomIn() {
+        isZoomedOut = false;
+        document.getElementById('zoomOutView').style.display = 'none';
+        document.getElementById('zoomInView').style.display = 'block';
+        document.getElementById('zoomInBtn').classList.add('active');
+        document.getElementById('zoomOutBtn').classList.remove('active');
+    }
+
     // Wizard Logic
     const wizard = document.getElementById("addLogWizard");
     let currentStep = 1;

@@ -16,6 +16,7 @@ class Subsystem extends Model
         'description',
         'icon',
         'color',
+        'health_status',
         'order',
         'user_id',
     ];
@@ -37,23 +38,53 @@ class Subsystem extends Model
 
     public function getHealthStatusAttribute(): string
     {
+        // Check for manual status first
+        if (!empty($this->attributes['health_status']) && $this->attributes['health_status'] !== 'auto') {
+            return $this->attributes['health_status'];
+        }
+
         $components = $this->components;
         
         if ($components->isEmpty()) {
-            return 'needs_love';
+            return 'yellow';
         }
 
-        $onFireCount = $components->where('health_status', 'on_fire')->count();
-        $needsLoveCount = $components->where('health_status', 'needs_love')->count();
+        $redCount = $components->filter(function ($component) {
+            return in_array($component->health_status, ['red', 'on_fire']);
+        })->count();
 
-        if ($onFireCount > 0) {
-            return 'on_fire';
+        if ($redCount > 0) {
+            return 'red';
         }
 
-        if ($needsLoveCount > 0) {
-            return 'needs_love';
+        $yellowCount = $components->filter(function ($component) {
+            return in_array($component->health_status, ['yellow', 'needs_love']);
+        })->count();
+
+        if ($yellowCount > 0) {
+            return 'yellow';
         }
 
-        return 'smooth';
+        return 'green';
+    }
+
+    public function getStatusColorAttribute(): string
+    {
+        return match($this->health_status) {
+            'green', 'smooth' => '#10b981',
+            'red', 'on_fire' => '#ef4444',
+            'yellow', 'needs_love' => '#fbbf24',
+            default => '#6b7280',
+        };
+    }
+
+    public function getStatusIconAttribute(): string
+    {
+        return match($this->health_status) {
+            'green', 'smooth' => '🟢',
+            'red', 'on_fire' => '🔴',
+            'yellow', 'needs_love' => '🟡',
+            default => '⚪',
+        };
     }
 }

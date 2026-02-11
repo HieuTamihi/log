@@ -15,11 +15,8 @@ class SetLocale
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Get locale from session, default to 'vi' (Vietnamese)
-        $locale = session('locale', 'vi');
-
-        // Set application locale
-        app()->setLocale($locale);
+        // Always use English locale
+        app()->setLocale('en');
 
         return $next($request);
     }

@@ -166,12 +166,12 @@
                         @foreach($results['components'] as $component)
                         <a href="{{ route('subsystems.show', ['machineSlug' => $component->subsystem->machine->slug, 'subsystemSlug' => $component->subsystem->slug]) }}" class="result-card">
                             <div class="result-status status-{{ $component->health_status }}">
-                                @if($component->health_status === 'on_fire')
-                                    🔥
-                                @elseif($component->health_status === 'needs_love')
-                                    💛
+                                @if(in_array($component->health_status, ['red', 'on_fire']))
+                                    🔴
+                                @elseif(in_array($component->health_status, ['yellow', 'needs_love']))
+                                    🟡
                                 @else
-                                    ✅
+                                    🟢
                                 @endif
                             </div>
                             <div class="result-content">
@@ -612,6 +612,10 @@
     .result-status.status-needs_love {
         background: #fef3c7;
     }
+
+    .result-status.status-green { background: #d1fae5; }
+    .result-status.status-red { background: #fee2e2; }
+    .result-status.status-yellow { background: #fef3c7; }
 
     .result-content {
         flex: 1;

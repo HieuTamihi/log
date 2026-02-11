@@ -24,7 +24,10 @@ class MachineManagementController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'header' => 'nullable|string|max:255',
+            'sub_header' => 'nullable|string|max:255',
             'description' => 'required|string',
+            'detail_description' => 'nullable|string',
             'icon' => 'nullable|string|max:50',
             'color' => 'nullable|string|max:20',
             'order' => 'nullable|integer',
@@ -60,7 +63,10 @@ class MachineManagementController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'header' => 'nullable|string|max:255',
+            'sub_header' => 'nullable|string|max:255',
             'description' => 'required|string',
+            'detail_description' => 'nullable|string',
             'icon' => 'nullable|string|max:50',
             'color' => 'nullable|string|max:20',
             'order' => 'nullable|integer',
@@ -90,5 +96,24 @@ class MachineManagementController extends Controller
 
         return redirect()->route('dashboard')
             ->with('success', __('messages.machine_deleted'));
+    }
+
+    public function updateStatus(Request $request, Machine $machine)
+    {
+        $validated = $request->validate([
+            'health_status' => 'required|string|in:green,red,yellow,auto',
+        ]);
+
+        $machine->update([
+            'health_status' => $validated['health_status'] === 'auto' ? null : $validated['health_status']
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Status updated successfully',
+            'health_status' => $machine->health_status,
+            'status_color' => $machine->status_color,
+            'status_icon' => $machine->status_icon
+        ]);
     }
 }

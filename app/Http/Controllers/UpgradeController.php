@@ -29,6 +29,7 @@ class UpgradeController extends Controller
         $request->validate([
             'component_id' => 'required|exists:components,id',
             'name' => 'required|string|max:255',
+            'content' => 'nullable|string',
             'purpose' => 'nullable|string',
             'trigger' => 'nullable|string',
             'steps' => 'nullable|array',
@@ -40,6 +41,7 @@ class UpgradeController extends Controller
             'component_id' => $request->component_id,
             'user_id' => Auth::id(),
             'name' => $request->name,
+            'content' => $request->content,
             'purpose' => $request->purpose,
             'trigger' => $request->trigger,
             'steps' => $request->steps ? array_values(array_filter($request->steps)) : [],
@@ -78,6 +80,7 @@ class UpgradeController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
+            'content' => 'nullable|string',
             'purpose' => 'nullable|string',
             'trigger' => 'nullable|string',
             'steps' => 'nullable|array',
@@ -87,6 +90,7 @@ class UpgradeController extends Controller
 
         $upgrade->update([
             'name' => $request->name,
+            'content' => $request->content,
             'purpose' => $request->purpose,
             'trigger' => $request->trigger,
             'steps' => $request->steps ? array_values(array_filter($request->steps)) : [],
@@ -105,12 +109,14 @@ class UpgradeController extends Controller
             abort(403, 'Unauthorized');
         }
 
+        // Update Component Content
+        $component = $upgrade->component;
+        $component->content = $upgrade->content;
+        $component->save();
+
         $upgrade->ship();
 
-        return redirect()->route('subsystems.show', [
-            'machineSlug' => $upgrade->component->subsystem->machine->slug,
-            'subsystemSlug' => $upgrade->component->subsystem->slug,
-        ])->with('success', '🎉 Boom! Upgrade shipped successfully!');
+        return redirect()->route('components.show', $component)->with('success', '🎉 Boom! Upgrade shipped successfully!');
     }
 
     /**

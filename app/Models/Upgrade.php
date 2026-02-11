@@ -13,6 +13,7 @@ class Upgrade extends Model
         'component_id',
         'user_id',
         'name',
+        'content',
         'purpose',
         'trigger',
         'steps',

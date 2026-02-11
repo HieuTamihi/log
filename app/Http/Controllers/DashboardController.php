@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Log;
+use App\Models\Machine;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
@@ -17,12 +18,19 @@ class DashboardController extends Controller
         $countNeedAction = Log::where('status', 'open')->count();
 
         $lastLog = Log::latest()->first();
+        
+        // Get machines with subsystems for zoom view
+        $machines = Machine::with(['subsystems.components'])
+            ->where('user_id', auth()->id())
+            ->orderBy('order')
+            ->get();
 
         return view('dashboard', compact(
             'countLogged',
             'countInProgress',
             'countNeedAction',
-            'lastLog'
+            'lastLog',
+            'machines'
         ));
     }
 }

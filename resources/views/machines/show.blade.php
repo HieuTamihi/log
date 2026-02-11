@@ -13,7 +13,7 @@
         <div class="ss-container">
             <!-- Breadcrumb -->
             <div class="breadcrumb">
-                <a href="{{ route('dashboard') }}" class="breadcrumb-item">Business Machine</a>
+                <a href="{{ route('dashboard') }}" class="breadcrumb-item">Dashboard</a>
                 <span class="breadcrumb-separator">→</span>
                 <span class="breadcrumb-item active">{{ $machine->name }}</span>
             </div>
@@ -22,20 +22,23 @@
             <div class="page-header-detail">
                 <div class="machine-icon-large" style="display: none;">{{ $machine->icon }}</div>
                 <div style="flex: 1;">
-                    <h1 class="page-title-detail">{{ $machine->name }} Machine</h1>
-                    <p class="page-subtitle">{{ $machine->description }}</p>
+                    <h1 class="page-title-detail">{{ $machine->name }}</h1>
+                     @if($machine->sub_header || $machine->description)
+                        <div class="machine-sub-header" style="font-size: 18px; color: #6366f1; margin-bottom: 8px; font-weight: 500;">{{ $machine->sub_header ?? $machine->description }}</div>
+                    @endif
+                    <p class="page-subtitle">{{ $machine->detail_description }}</p>
                     @if($machine->user)
-                    <p class="creator-info">👤 Người tạo: <strong>{{ $machine->user->username }}</strong> • {{ $machine->created_at->diffForHumans() }}</p>
+                    <p class="creator-info">👤 Created by: <strong>{{ $machine->user->username }}</strong> • {{ $machine->created_at->diffForHumans() }}</p>
                     @endif
                 </div>
                 <div style="display: flex; gap: 12px;">
                     <a href="{{ route('machines.edit', $machine) }}" class="btn-secondary">
                         <i data-lucide="edit-2"></i>
-                        <span>{{ __('messages.edit_machine') }}</span>
+                        <span>Edit Machine</span>
                     </a>
                     <a href="{{ route('subsystems.create', $machine) }}" class="btn-primary">
                         <i data-lucide="plus"></i>
-                        <span>{{ __('messages.create_subsystem') }}</span>
+                        <span>Create Subsystem</span>
                     </a>
                 </div>
             </div>
@@ -50,33 +53,34 @@
             <!-- Subsystems Grid -->
             <div class="subsystems-grid">
                 @foreach($machine->subsystems as $subsystem)
-                <div class="subsystem-card">
+                <div class="subsystem-card"
+                     oncontextmenu="showSubsystemContextMenu(event, {{ $subsystem->id }})"
+                     ontouchstart="handleSubsystemTouchStart(event, {{ $subsystem->id }})"
+                     ontouchend="handleSubsystemTouchEnd(event)">
                     <h3 class="subsystem-name">{{ $subsystem->name }}</h3>
                     <p class="subsystem-description">{{ $subsystem->description }}</p>
 
                     <div class="subsystem-metrics">
                         @php
-                            $componentsCount = $subsystem->components->count();
-                            $onFireCount = $subsystem->components->where('health_status', 'on_fire')->count();
-                            $needsLoveCount = $subsystem->components->where('health_status', 'needs_love')->count();
+                            $status = $subsystem->health_status;
+                            $icon = $subsystem->status_icon;
+                            $colorClass = match($status) {
+                                'green', 'smooth' => 'success',
+                                'red', 'on_fire' => 'danger',
+                                'yellow', 'needs_love' => 'warning',
+                                default => 'secondary'
+                            };
+                            $statusText = match($status) {
+                                'green', 'smooth' => 'Smooth',
+                                'red', 'on_fire' => 'On Fire',
+                                'yellow', 'needs_love' => 'Needs Love',
+                                default => 'Unknown'
+                            };
                         @endphp
                         
-                        @if($onFireCount > 0)
-                            <div class="metric-badge danger">
-                                <span class="metric-icon">🔥</span>
-                                <span>{{ $onFireCount }} {{ __('messages.on_fire') }}</span>
-                            </div>
-                        @elseif($needsLoveCount > 0)
-                            <div class="metric-badge warning">
-                                <span class="metric-icon">💛</span>
-                                <span>{{ __('messages.needs_love') }}</span>
-                            </div>
-                        @else
-                            <div class="metric-badge success">
-                                <span class="metric-icon">✅</span>
-                                <span>{{ __('messages.smooth') }}</span>
-                            </div>
-                        @endif
+                        <div id="subsystem-status-badge-{{ $subsystem->id }}" class="metric-badge {{ $colorClass }}">
+                            <span class="metric-icon">{{ $icon }}</span>
+                        </div>
                     </div>
 
                     <a href="{{ route('subsystems.show', ['machineSlug' => $machine->slug, 'subsystemSlug' => $subsystem->slug]) }}" class="btn-upgrade">
@@ -86,7 +90,7 @@
                     
                     <a href="{{ route('subsystems.edit', $subsystem) }}" class="btn-secondary" style="margin-top: 8px;">
                         <i data-lucide="edit-2"></i>
-                        <span>{{ __('messages.edit_subsystem') }}</span>
+                        <span>Edit Subsystem</span>
                     </a>
                     
                     @if(!$loop->last)
@@ -115,7 +119,7 @@
 
             @if($allUpgrades->count() > 0)
             <div class="upgrades-section">
-                <h2 class="section-title">🚀 Các Cải tiến ({{ $allUpgrades->count() }})</h2>
+                <h2 class="section-title">🚀 Improvements ({{ $allUpgrades->count() }})</h2>
                 
                 <div class="upgrades-list-full">
                     @foreach($allUpgrades as $upgrade)
@@ -130,7 +134,7 @@
                             </div>
                             <div class="upgrade-card-right">
                                 <span class="upgrade-status-badge status-{{ $upgrade->status }}">
-                                    {{ $upgrade->status === 'shipped' ? '✅ Hoàn thành' : ($upgrade->status === 'active' ? '⚡ Đang làm' : '📝 Nháp') }}
+                                    {{ $upgrade->status === 'shipped' ? '✅ Completed' : ($upgrade->status === 'active' ? '⚡ In Progress' : '📝 Draft') }}
                                 </span>
                                 <span class="upgrade-date">{{ $upgrade->created_at->diffForHumans() }}</span>
                             </div>
@@ -139,21 +143,21 @@
                         <div class="upgrade-card-content">
                             @if($upgrade->purpose)
                             <div class="upgrade-field">
-                                <strong>🎯 Mục đích:</strong>
+                                <strong>🎯 Purpose:</strong>
                                 <p>{{ $upgrade->purpose }}</p>
                             </div>
                             @endif
                             
                             @if($upgrade->trigger)
                             <div class="upgrade-field">
-                                <strong>⚡ Kích hoạt:</strong>
+                                <strong>⚡ Trigger:</strong>
                                 <p>{{ $upgrade->trigger }}</p>
                             </div>
                             @endif
                             
                             @if($upgrade->steps && count($upgrade->steps) > 0)
                             <div class="upgrade-field">
-                                <strong>📋 Các bước:</strong>
+                                <strong>📋 Steps:</strong>
                                 <ol class="upgrade-steps-list">
                                     @foreach($upgrade->steps as $step)
                                     <li>{{ $step }}</li>
@@ -164,21 +168,21 @@
                             
                             @if($upgrade->definition_of_done)
                             <div class="upgrade-field">
-                                <strong>✅ Tiêu chí hoàn thành:</strong>
+                                <strong>✅ Definition of Done:</strong>
                                 <p>{{ $upgrade->definition_of_done }}</p>
                             </div>
                             @endif
                             
                             @if($upgrade->shipped_at)
                             <div class="upgrade-shipped-info">
-                                🚀 Hoàn thành: {{ $upgrade->shipped_at->format('d/m/Y H:i') }}
+                                🚀 Completed: {{ $upgrade->shipped_at->format('d/m/Y H:i') }}
                             </div>
                             @endif
                         </div>
                         
                         <div class="upgrade-card-actions">
                             <a href="{{ route('upgrades.edit', $upgrade) }}" class="btn-sm-secondary">
-                                <i class="fas fa-edit"></i> Chỉnh sửa
+                                <i class="fas fa-edit"></i> Edit
                             </a>
                         </div>
                     </div>
@@ -190,8 +194,172 @@
     </main>
 </div>
 
+<!-- Subsystem Context Menu -->
+<div id="subsystemContextMenu" class="context-menu">
+    <div class="context-menu-item" onclick="updateSubsystemStatus('green')">
+        <span class="status-dot dot-green"></span>
+        <span>Green</span>
+    </div>
+    <div class="context-menu-item" onclick="updateSubsystemStatus('yellow')">
+        <span class="status-dot dot-yellow"></span>
+        <span>Yellow</span>
+    </div>
+    <div class="context-menu-item" onclick="updateSubsystemStatus('red')">
+        <span class="status-dot dot-red"></span>
+        <span>Red</span>
+    </div>
+     <div class="context-menu-separator"></div>
+    <div class="context-menu-item" onclick="updateSubsystemStatus('auto')">
+        <span class="status-dot dot-auto">⚙️</span>
+        <span>Auto</span>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+    let activeSubsystemId = null;
+    let subsystemTouchTimer = null;
+    const subsystemContextMenu = document.getElementById('subsystemContextMenu');
+
+    document.addEventListener('click', (e) => {
+        if (!subsystemContextMenu.contains(e.target)) {
+            subsystemContextMenu.classList.remove('show');
+        }
+    });
+
+    document.addEventListener('scroll', () => {
+        subsystemContextMenu.classList.remove('show');
+    }, true);
+
+    function showSubsystemContextMenu(event, subsystemId) {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        activeSubsystemId = subsystemId;
+        
+        let x = event.clientX;
+        let y = event.clientY;
+        
+        // Boundary check
+        if (x + 160 > window.innerWidth) x -= 160;
+        if (y + 160 > window.innerHeight) y -= 160;
+        
+        subsystemContextMenu.style.left = `${x}px`;
+        subsystemContextMenu.style.top = `${y}px`;
+        subsystemContextMenu.classList.add('show');
+    }
+
+    function handleSubsystemTouchStart(event, subsystemId) {
+        subsystemTouchTimer = setTimeout(() => {
+            const touch = event.touches[0];
+            const mockEvent = {
+                preventDefault: () => {},
+                stopPropagation: () => {},
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            };
+            showSubsystemContextMenu(mockEvent, subsystemId);
+        }, 500);
+    }
+
+    function handleSubsystemTouchEnd(event) {
+        if (subsystemTouchTimer) {
+            clearTimeout(subsystemTouchTimer);
+            subsystemTouchTimer = null;
+        }
+    }
+
+    function updateSubsystemStatus(status) {
+        if (!activeSubsystemId) return;
+
+        // Optimistic Update
+        const badge = document.getElementById(`subsystem-status-badge-${activeSubsystemId}`);
+        if(badge) {
+            badge.className = 'metric-badge'; // Reset
+            let icon = '⚪';
+            let colorClass = 'secondary';
+            
+            if (status === 'green') { icon = '🟢'; colorClass = 'success'; }
+            else if (status === 'yellow') { icon = '🟡'; colorClass = 'warning'; }
+            else if (status === 'red') { icon = '🔴'; colorClass = 'danger'; }
+            else if (status === 'auto') { icon = '🔄'; colorClass = 'secondary'; }
+
+            badge.classList.add(colorClass);
+            const iconSpan = badge.querySelector('.metric-icon');
+            if(iconSpan) iconSpan.textContent = icon;
+        }
+
+        // Send Request
+        fetch(`/manage/subsystems/${activeSubsystemId}/status`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({ health_status: status })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                if(badge) {
+                     badge.className = 'metric-badge';
+                     
+                     let serverColorClass = 'secondary';
+                     let serverIcon = data.status_icon;
+
+                     if(['green', 'smooth'].includes(data.health_status)) serverColorClass = 'success';
+                     else if(['yellow', 'needs_love'].includes(data.health_status)) serverColorClass = 'warning';
+                     else if(['red', 'on_fire'].includes(data.health_status)) serverColorClass = 'danger';
+
+                     badge.classList.add(serverColorClass);
+                     const iconSpan = badge.querySelector('.metric-icon');
+                     if(iconSpan) iconSpan.textContent = serverIcon;
+                }
+            }
+        })
+        .catch(error => console.error('Error:', error));
+
+        subsystemContextMenu.classList.remove('show');
+    }
+</script>
+@endpush
+
 @push('styles')
 <style>
+    /* Context Menu */
+    .context-menu {
+        display: none;
+        position: fixed;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 9999;
+        min-width: 160px;
+        overflow: hidden;
+        padding: 4px;
+    }
+    .context-menu.show { display: block; animation: fadeIn 0.1s ease-out; }
+    .context-menu-item {
+        padding: 10px 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: background 0.2s;
+        font-weight: 500;
+        color: #475569;
+    }
+    .context-menu-item:hover { background: #f1f5f9; color: #1a202c; }
+    .context-menu-separator { height: 1px; background: #e2e8f0; margin: 4px 0; }
+    .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+    .dot-green { background: #10b981; }
+    .dot-yellow { background: #fbbf24; }
+    .dot-red { background: #ef4444; }
+    .dot-auto { background: none; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+    @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
     * {
         margin: 0;
         padding: 0;

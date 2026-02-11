@@ -54,14 +54,14 @@
                             {{ __('messages.health_status') }} *
                         </label>
                         <select id="health_status" name="health_status" required>
-                            <option value="smooth" {{ old('health_status', $component->health_status) == 'smooth' ? 'selected' : '' }}>
-                                ✅ {{ __('messages.smooth') }}
+                            <option value="green" {{ old('health_status', $component->health_status) == 'green' ? 'selected' : '' }}>
+                                🟢 {{ __('messages.smooth') }}
                             </option>
-                            <option value="needs_love" {{ old('health_status', $component->health_status) == 'needs_love' ? 'selected' : '' }}>
-                                💛 {{ __('messages.needs_love') }}
+                            <option value="yellow" {{ old('health_status', $component->health_status) == 'yellow' ? 'selected' : '' }}>
+                                🟡 {{ __('messages.needs_love') }}
                             </option>
-                            <option value="on_fire" {{ old('health_status', $component->health_status) == 'on_fire' ? 'selected' : '' }}>
-                                🔥 {{ __('messages.on_fire') }}
+                            <option value="red" {{ old('health_status', $component->health_status) == 'red' ? 'selected' : '' }}>
+                                🔴 {{ __('messages.on_fire') }}
                             </option>
                         </select>
                         @error('health_status')

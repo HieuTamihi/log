@@ -68,4 +68,23 @@ class SubsystemManagementController extends Controller
         return redirect()->route('machines.show', $machineSlug)
             ->with('success', __('messages.subsystem_deleted'));
     }
+
+    public function updateStatus(Request $request, Subsystem $subsystem)
+    {
+        $validated = $request->validate([
+            'health_status' => 'required|string|in:green,red,yellow,auto',
+        ]);
+
+        $subsystem->update([
+            'health_status' => $validated['health_status'] === 'auto' ? null : $validated['health_status']
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Status updated successfully',
+            'health_status' => $subsystem->health_status,
+            'status_color' => $subsystem->status_color,
+            'status_icon' => $subsystem->status_icon
+        ]);
+    }
 }

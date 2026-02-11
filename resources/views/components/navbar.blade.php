@@ -334,26 +334,6 @@
                     <input type="search" name="q" placeholder="{{ __('messages.search') }}" class="search-input" value="{{ request('q') }}">
                 </form>
                 
-                {{-- Language Switcher --}}
-                <div class="language-switcher">
-                    @if(app()->getLocale() === 'vi')
-                        <a href="{{ route('language.switch', 'en') }}" class="lang-btn" title="Switch to English">
-                            <span class="flag">🇬🇧</span>
-                            <span class="lang-text">EN</span>
-                        </a>
-                    @else
-                        <a href="{{ route('language.switch', 'vi') }}" class="lang-btn" title="Chuyển sang tiếng Việt">
-                            <span class="flag">🇻🇳</span>
-                            <span class="lang-text">VI</span>
-                        </a>
-                    @endif
-                </div>
-                
-                {{-- Help Link --}}
-                <a href="{{ route('help') }}" class="icon-btn" title="Hướng dẫn sử dụng">
-                    <i class="fas fa-question-circle"></i>
-                </a>
-                
                 {{-- Notification --}}
                 <div class="notification-wrapper">
                     <button class="icon-btn notification-btn" onclick="toggleNotifications()">

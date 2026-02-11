@@ -14,6 +14,7 @@ class Component extends Model
         'name',
         'slug',
         'description',
+        'content',
         'icon',
         'health_status',
         'current_issue',
@@ -43,12 +44,22 @@ class Component extends Model
         return $this->hasMany(Upgrade::class)->where('status', 'active');
     }
 
+    public function getHealthStatusAttribute($value): string
+    {
+        return match($value) {
+            'smooth', 'green' => 'green',
+            'on_fire', 'red' => 'red',
+            'needs_love', 'yellow' => 'yellow',
+            default => 'green',
+        };
+    }
+
     public function getStatusColorAttribute(): string
     {
         return match($this->health_status) {
-            'smooth' => '#10b981',
-            'on_fire' => '#ef4444',
-            'needs_love' => '#fbbf24',
+            'green', 'smooth' => '#10b981',
+            'red', 'on_fire' => '#ef4444',
+            'yellow', 'needs_love' => '#fbbf24',
             default => '#6b7280',
         };
     }
@@ -56,9 +67,9 @@ class Component extends Model
     public function getStatusIconAttribute(): string
     {
         return match($this->health_status) {
-            'smooth' => '✅',
-            'on_fire' => '🔥',
-            'needs_love' => '💛',
+            'green', 'smooth' => '🟢', // Green Circle
+            'red', 'on_fire' => '🔴', // Red Circle
+            'yellow', 'needs_love' => '🟡', // Yellow Circle
             default => '⚪',
         };
     }

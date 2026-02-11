@@ -55,13 +55,24 @@ Route::middleware('auth')->group(function () {
     Route::get('/manage/subsystems/{subsystem}/edit', [SubsystemManagementController::class, 'edit'])->name('subsystems.edit');
     Route::put('/manage/subsystems/{subsystem}', [SubsystemManagementController::class, 'update'])->name('subsystems.update');
     Route::delete('/manage/subsystems/{subsystem}', [SubsystemManagementController::class, 'destroy'])->name('subsystems.destroy');
+    Route::patch('/manage/machines/{machine}/status', [MachineManagementController::class, 'updateStatus'])->name('machines.status.update');
+    Route::patch('/machines/{machine}/coordinates', [MachineController::class, 'updateCoordinates'])->name('machines.coordinates.update');
+    Route::post('/machines/swap-order', [MachineController::class, 'swapOrder'])->name('machines.order.swap');
+    Route::patch('/manage/subsystems/{subsystem}/status', [SubsystemManagementController::class, 'updateStatus'])->name('subsystems.status.update');
     
     // Component Management (CRUD)
     Route::get('/manage/subsystems/{subsystem}/components/create', [ComponentManagementController::class, 'create'])->name('components.create');
     Route::post('/manage/subsystems/{subsystem}/components', [ComponentManagementController::class, 'store'])->name('components.store');
     Route::get('/manage/components/{component}/edit', [ComponentManagementController::class, 'edit'])->name('components.edit');
     Route::put('/manage/components/{component}', [ComponentManagementController::class, 'update'])->name('components.update');
+    Route::patch('/manage/components/{component}/status', [ComponentManagementController::class, 'updateStatus'])->name('components.updateStatus');
     Route::delete('/manage/components/{component}', [ComponentManagementController::class, 'destroy'])->name('components.destroy');
+    
+    // Machine Connections
+    Route::get('/machine-connections', [App\Http\Controllers\MachineConnectionController::class, 'index'])->name('connections.index');
+    Route::post('/machine-connections', [App\Http\Controllers\MachineConnectionController::class, 'store'])->name('connections.store');
+    Route::delete('/machine-connections/{connection}', [App\Http\Controllers\MachineConnectionController::class, 'destroy'])->name('connections.destroy');
+    Route::post('/machine-connections/cleanup', [App\Http\Controllers\MachineConnectionController::class, 'cleanup'])->name('connections.cleanup');
     
     // Upgrades
     Route::get('/components/{componentId}/upgrades/create', [UpgradeController::class, 'create'])->name('upgrades.create');

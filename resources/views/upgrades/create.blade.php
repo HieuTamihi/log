@@ -40,37 +40,49 @@
 
                 <div class="form-card">
                     <div class="form-group">
-                        <label for="name" class="form-label">Tên Cải Tiến</label>
+                        <label for="name" class="form-label">Tên Phiên Bản / Tiêu Đề</label>
                         <input 
                             type="text" 
                             id="name" 
                             name="name" 
                             class="form-input" 
-                            placeholder="Ví dụ: Quy trình viết hook 3 bước"
+                            placeholder="Ví dụ: Cập nhật nội dung v2"
                             required
                             value="{{ old('name') }}"
                         >
                     </div>
 
                     <div class="form-group">
-                        <label for="purpose" class="form-label">Mục Đích</label>
+                        <label for="content" class="form-label">Nội dung (Markdown)</label>
+                        <textarea 
+                            id="content" 
+                            name="content" 
+                            class="form-textarea" 
+                            rows="15"
+                            placeholder="Viết nội dung note ở đây..."
+                        >{{ old('content', $component->content) }}</textarea>
+                        <p style="font-size: 12px; color: #64748b; margin-top: 4px;">Hỗ trợ Markdown cơ bản.</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="purpose" class="form-label">Ghi Chú Thay Đổi (Optional)</label>
                         <textarea 
                             id="purpose" 
                             name="purpose" 
                             class="form-textarea" 
-                            rows="3"
-                            placeholder="Tại sao cải tiến này tồn tại? Nó giải quyết vấn đề gì?"
+                            rows="2"
+                            placeholder="Tóm tắt những thay đổi trong phiên bản này..."
                         >{{ old('purpose') }}</textarea>
                     </div>
 
                     <div class="form-group">
-                        <label for="trigger" class="form-label">Kích Hoạt</label>
+                        <label for="trigger" class="form-label">Khi nào kích hoạt? (Optional)</label>
                         <textarea 
                             id="trigger" 
                             name="trigger" 
                             class="form-textarea" 
                             rows="2"
-                            placeholder="Khi nào nên sử dụng cải tiến này?"
+                            placeholder="Khi nào nên sử dụng quy trình này?"
                         >{{ old('trigger') }}</textarea>
                     </div>
 

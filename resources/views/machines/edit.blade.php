@@ -24,42 +24,25 @@
                     @method('PUT')
 
                     <div class="form-group">
-                        <label for="name">
-                            {{ __('messages.name') }} *
-                        </label>
-                        <input type="text" 
-                               id="name" 
-                               name="name" 
-                               value="{{ old('name', $machine->name) }}"
-                               required>
+                        <label for="name">Header *</label>
+                        <input type="text" id="name" name="name" value="{{ old('name', $machine->name) }}" required>
                         @error('name')
                             <p class="text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <div class="form-group">
-                        <label for="description">
-                            {{ __('messages.description') }} *
-                        </label>
-                        <textarea id="description" 
-                                  name="description" 
-                                  required>{{ old('description', $machine->description) }}</textarea>
-                        @error('description')
+                        <label for="sub_header">Sub-header</label>
+                        <input type="text" id="sub_header" name="sub_header" value="{{ old('sub_header', $machine->sub_header ?? $machine->description) }}">
+                        @error('sub_header')
                             <p class="text-red-500">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <div class="form-group">
-                        <label for="order">
-                            {{ __('messages.order') }} (Thứ tự hiển thị)
-                        </label>
-                        <input type="number" 
-                               id="order" 
-                               name="order" 
-                               value="{{ old('order', $machine->order) }}"
-                               placeholder="VD: 1, 2, 3...">
-                        <p class="text-sm text-gray-500 mt-1">Số nhỏ hơn sẽ hiển thị trước. Để trống sẽ tự động xếp cuối.</p>
-                        @error('order')
+                        <label for="detail_description">Detail Description</label>
+                        <textarea id="detail_description" name="detail_description" rows="5">{{ old('detail_description', $machine->detail_description) }}</textarea>
+                        @error('detail_description')
                             <p class="text-red-500">{{ $message }}</p>
                         @enderror
                     </div>

@@ -22,10 +22,9 @@ class DatabaseSeeder extends Seeder
             'password' => Hash::make('admin'),
         ]);
 
-        // Chạy các seeder khác
+        // Chạy seeder cho hệ thống Knowledge Graph mới
         $this->call([
-            SystemSightSeeder::class,
-            NotificationSeeder::class,
+            KnowledgeSeeder::class,
         ]);
     }
 }

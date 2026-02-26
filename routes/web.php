@@ -6,6 +6,7 @@ use App\Http\Controllers\GraphController;
 use App\Http\Controllers\FolderController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\CanvasController;
 use Illuminate\Support\Facades\Route;
 
 // Guest routes
@@ -41,8 +42,26 @@ Route::middleware('auth')->group(function () {
     Route::put('/api/notes/{note}', [NoteController::class, 'update'])->name('notes.update');
     Route::delete('/api/notes/{note}', [NoteController::class, 'destroy'])->name('notes.destroy');
     
+    // Note Attachments API
+    Route::post('/api/notes/{note}/attachments', [NoteController::class, 'uploadAttachment'])->name('notes.attachments.upload');
+    Route::delete('/api/attachments/{attachment}', [NoteController::class, 'deleteAttachment'])->name('notes.attachments.delete');
+    
+    // Note Tabs API
+    Route::post('/api/notes/{note}/tabs', [NoteController::class, 'createTab'])->name('notes.tabs.create');
+    Route::put('/api/tabs/{tab}', [NoteController::class, 'updateTab'])->name('notes.tabs.update');
+    Route::delete('/api/tabs/{tab}', [NoteController::class, 'deleteTab'])->name('notes.tabs.delete');
+    Route::post('/api/tabs/reorder', [NoteController::class, 'reorderTabs'])->name('notes.tabs.reorder');
+
+    
     // Users API
     Route::get('/api/users', [UserController::class, 'index'])->name('users.index');
+
+    // Canvas API
+    Route::get('/api/canvases', [CanvasController::class, 'index'])->name('canvases.index');
+    Route::post('/api/canvases', [CanvasController::class, 'store'])->name('canvases.store');
+    Route::get('/api/canvases/{canvas}', [CanvasController::class, 'show'])->name('canvases.show');
+    Route::put('/api/canvases/{canvas}', [CanvasController::class, 'update'])->name('canvases.update');
+    Route::delete('/api/canvases/{canvas}', [CanvasController::class, 'destroy'])->name('canvases.destroy');
 
     // Audit Logs
     Route::get('/audit-logs', [App\Http\Controllers\AuditLogController::class, 'index'])->name('audit_logs.index');

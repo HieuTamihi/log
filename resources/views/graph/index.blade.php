@@ -355,8 +355,14 @@
         }
         
         .card:hover { 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
             border-color: #b5b5b5;
+        }
+
+        .card.selected {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2), 0 4px 12px rgba(0,0,0,0.12);
+            z-index: 1000;
         }
         
         .card-header { 
@@ -426,11 +432,28 @@
         }
 
         .card-actions {
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid #f0f0f0;
+            position: absolute;
+            top: -45px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 4px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             display: flex;
-            gap: 6px;
+            gap: 4px;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.2s;
+            border: 1px solid #e5e5e5;
+            white-space: nowrap;
+        }
+        
+        .card.selected .card-actions {
+            opacity: 1;
+            pointer-events: auto;
+            top: -50px;
         }
         
         .card-btn {
@@ -511,9 +534,8 @@
         
         .note-content-view {
             font-size: 14px;
-            line-height: 1.8;
+            line-height: 1.5;
             color: #2e2e2e;
-            white-space: pre-wrap;
             word-wrap: break-word;
         }
         
@@ -526,13 +548,53 @@
         #modal-content textarea {
             width: 100%;
             min-height: 400px;
-            padding: 0;
-            border: none;
+            padding: 16px;
+            border: 1px solid #e5e5e5;
             font-size: 14px;
             font-family: inherit;
-            resize: none;
+            resize: vertical;
             line-height: 1.8;
             outline: none;
+            border-radius: 0 0 6px 6px;
+        }
+        
+        #note-content {
+            width: 100%;
+            height: 100%;
+            padding: 16px;
+            border: 1px solid #e5e5e5;
+            font-size: 14px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            resize: none;
+            line-height: 1.5;
+            outline: none;
+            border-radius: 0 0 6px 6px;
+            box-sizing: border-box;
+        }
+
+        /* Split Editor Layout */
+        .split-editor {
+            display: flex;
+            gap: 0;
+            height: calc(100vh - 400px);
+            min-height: 500px;
+            border: 1px solid #e5e5e5;
+            border-radius: 0 0 6px 6px;
+            background: white;
+        }
+
+        .editor-side {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #e5e5e5;
+        }
+
+        .preview-side {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            background: #fafafa;
         }
         
         .modal-actions {
@@ -656,6 +718,138 @@
         .history-note { font-size: 13px; color: #2e2e2e; }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* Markdown Styles */
+        .note-content-view h1,
+        .note-content-view h2,
+        .note-content-view h3,
+        .note-content-view h4,
+        .note-content-view h5,
+        .note-content-view h6 {
+            margin-top: 16px;
+            margin-bottom: 8px;
+            font-weight: 600;
+            line-height: 1.25;
+        }
+        
+        .note-content-view h1 { font-size: 2em; border-bottom: 1px solid #e5e5e5; padding-bottom: 8px; }
+        .note-content-view h2 { font-size: 1.5em; border-bottom: 1px solid #e5e5e5; padding-bottom: 8px; }
+        .note-content-view h3 { font-size: 1.25em; }
+        .note-content-view h4 { font-size: 1em; }
+        .note-content-view h5 { font-size: 0.875em; }
+        .note-content-view h6 { font-size: 0.85em; color: #6e6e6e; }
+        
+        .note-content-view p {
+            margin-bottom: 8px;
+        }
+        
+        .note-content-view ul,
+        .note-content-view ol {
+            margin-bottom: 8px;
+            padding-left: 1.5em;
+        }
+        
+        .note-content-view li {
+            margin-bottom: 2px;
+        }
+
+        .note-content-view > *:last-child {
+            margin-bottom: 0;
+        }
+        
+        .note-content-view code {
+            background: #f6f8fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .note-content-view pre {
+            background: #f6f8fa;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-bottom: 16px;
+        }
+        
+        .note-content-view pre code {
+            background: none;
+            padding: 0;
+        }
+        
+        .note-content-view blockquote {
+            border-left: 4px solid #e5e5e5;
+            padding-left: 16px;
+            margin-left: 0;
+            margin-bottom: 16px;
+            color: #6e6e6e;
+        }
+        
+        .note-content-view a {
+            color: #6366f1;
+            text-decoration: none;
+        }
+        
+        .note-content-view a:hover {
+            text-decoration: underline;
+        }
+        
+        .note-content-view table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 16px;
+        }
+        
+        .note-content-view table th,
+        .note-content-view table td {
+            border: 1px solid #e5e5e5;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        
+        .note-content-view table th {
+            background: #f6f8fa;
+            font-weight: 600;
+        }
+        
+        .note-content-view hr {
+            border: none;
+            border-top: 1px solid #e5e5e5;
+            margin: 24px 0;
+        }
+        
+        .note-content-view img {
+            max-width: 100%;
+            height: auto;
+        }
+        
+        /* Markdown Toolbar */
+        .md-btn {
+            padding: 6px 10px;
+            border: 1px solid #e5e5e5;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            color: #2e2e2e;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .md-btn:hover {
+            background: #f0f0f0;
+            border-color: #d0d0d0;
+        }
+        
+        .md-btn:active {
+            background: #e5e5e5;
+        }
+    </style>
 </head>
 <body>
     <div style="display: flex;">
@@ -669,6 +863,10 @@
                 <!-- New Folder -->
                 <button class="icon-btn" onclick="createFolder()" title="New folder">
                     <svg viewBox="0 0 24 24"><path d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4Z"/></svg>
+                </button>
+                <!-- New Canvas -->
+                <button class="icon-btn" onclick="createCanvas()" title="New canvas">
+                    <svg viewBox="0 0 24 24"><path d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4M19,19H5V8H19V19M17,12V14H13V18H11V14H7V12H11V8H13V12H17Z"/></svg>
                 </button>
                 <!-- Collapse/Expand All -->
                 <button class="icon-btn" onclick="toggleExpandAll()" title="Collapse/Expand all">
@@ -704,6 +902,9 @@
                     <!-- Logo -->
                     <div style="font-weight: 600; font-size: 16px; color: #2e2e2e; display: flex; align-items: center; gap: 8px;">
                         System Sight
+                        <span id="canvas-indicator" style="font-size: 13px; font-weight: 400; color: #6e6e6e; display: none;">
+                            / <span id="canvas-name"></span>
+                        </span>
                     </div>
                 </div>
 
@@ -746,8 +947,25 @@
                 </div>
             </div>
 
+            <!-- Welcome Screen -->
+            <div id="welcome-screen" style="position: relative; flex: 1; overflow: hidden; background: #f8f8f8; display: flex; align-items: center; justify-content: center;">
+                <div style="text-align: center; color: #6e6e6e;">
+                    <div style="font-size: 48px; margin-bottom: 16px;">📚</div>
+                    <h2 style="font-size: 24px; font-weight: 600; color: #2e2e2e; margin-bottom: 8px;">Welcome to System Sight</h2>
+                    <p style="font-size: 14px; line-height: 1.6;">
+                        Create notes and folders from the sidebar<br>
+                        Or click on a canvas to start visualizing
+                    </p>
+                </div>
+            </div>
+
+            <!-- Note Editor Panel -->
+            <div id="note-panel" style="position: relative; flex: 1; overflow: hidden; background: #f8f8f8; display: none; flex-direction: column;">
+                <!-- Note content will be loaded here -->
+            </div>
+
             <!-- Canvas Wrapper -->
-            <div style="position: relative; flex: 1; overflow: hidden; background: #f8f8f8;">
+            <div id="canvas-wrapper" style="position: relative; flex: 1; overflow: hidden; background: #f8f8f8; display: none;">
                 <div class="right-toolbar">
                     <button onclick="zoomIn()" class="toolbar-btn" title="Zoom in">
                         <svg viewBox="0 0 24 24"><path d="M15.5,14L20.5,19L19,20.5L14,15.5V14.71L13.73,14.44C12.59,15.41 11.11,16 9.5,16A6.5,6.5 0 0,1 3,9.5A6.5,6.5 0 0,1 9.5,3A6.5,6.5 0 0,1 16,9.5C16,11.11 15.41,12.59 14.44,13.73L14.71,14H15.5M9.5,5C7,5 5,7 5,9.5C5,12 7,14 9.5,14C12,14 14,12 14,9.5C14,7 12,5 9.5,5M12,10H10V12H9V10H7V9H9V7H10V9H12V10Z"/></svg>
@@ -823,6 +1041,9 @@
         <div style="background: white; padding: 24px; border-radius: 8px; max-width: 300px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
             <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #333;">Change Status</h3>
             <div style="display: flex; gap: 12px; justify-content: center; margin-bottom: 20px;">
+                <button type="button" onclick="changeStatusFromMenu('none')" class="status-menu-btn" data-status="none" style="width: 48px; height: 48px; border-radius: 8px; border: 2px solid #ddd; background: white; cursor: pointer; transition: all 0.15s; position: relative;" title="None">
+                    <svg viewBox="0 0 24 24" style="width: 28px; height: 28px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); fill: #999;"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
+                </button>
                 <button type="button" onclick="changeStatusFromMenu('draft')" class="status-menu-btn" data-status="draft" style="width: 48px; height: 48px; border-radius: 8px; border: 2px solid #ddd; background: #ef4444; cursor: pointer; transition: all 0.15s;" title="Red - Issues/Draft"></button>
                 <button type="button" onclick="changeStatusFromMenu('improving')" class="status-menu-btn" data-status="improving" style="width: 48px; height: 48px; border-radius: 8px; border: 2px solid #ddd; background: #f59e0b; cursor: pointer; transition: all 0.15s;" title="Yellow - In Progress"></button>
                 <button type="button" onclick="changeStatusFromMenu('standardized')" class="status-menu-btn" data-status="standardized" style="width: 48px; height: 48px; border-radius: 8px; border: 2px solid #ddd; background: #10b981; cursor: pointer; transition: all 0.15s;" title="Green - Complete"></button>
@@ -865,6 +1086,7 @@
         let expandedFolders = new Set();
         let editingElement = null;
         let contextMenuTarget = null;
+        let selectedCardId = null;
 
         const canvas = document.getElementById('canvas');
         const modal = document.getElementById('modal');
@@ -872,15 +1094,19 @@
         const contextMenu = document.getElementById('context-menu');
 
         let rootNotes = [];
+        let canvases = [];
+        let currentCanvasId = null; // Track current canvas
 
         // Load folders and notes
         async function loadFolders() {
-            const [foldersRes, rootNotesRes] = await Promise.all([
+            const [foldersRes, rootNotesRes, canvasesRes] = await Promise.all([
                 fetch('/api/folders/tree'),
-                fetch('/api/notes?root=true')
+                fetch('/api/notes?root=true'),
+                fetch('/api/canvases')
             ]);
             folders = await foldersRes.json();
             rootNotes = await rootNotesRes.json();
+            canvases = await canvasesRes.json();
             renderFolderTree();
         }
 
@@ -901,7 +1127,7 @@
             };
 
             const rootNotesHtml = rootNotes.map(note => {
-                const noteStatus = note.status && statusIcons[note.status] ? `<span style="font-size: 10px; margin-left: auto;">${statusIcons[note.status]}</span>` : '';
+                const noteStatus = note.status && note.status !== 'none' && statusIcons[note.status] ? `<span style="font-size: 10px; margin-left: auto;">${statusIcons[note.status]}</span>` : '';
                 return `
                     <div class="tree-item note-tree-item" draggable="true" data-type="note" data-note-id="${note.id}">
                         <span class="tree-item-icon" style="visibility: hidden;"></span>
@@ -911,8 +1137,19 @@
                 `;
             }).join('');
 
-            tree.innerHTML = foldersHtml + rootNotesHtml;
+            // Render canvases
+            const canvasesHtml = canvases.map(canvas => {
+                return `
+                    <div class="tree-item canvas-tree-item" draggable="true" data-type="canvas" data-canvas-id="${canvas.id}">
+                        <span class="tree-item-icon">🎨</span>
+                        <span class="tree-item-name" contenteditable="false" onblur="saveItemName(${canvas.id}, 'canvas', this)" onkeydown="handleKeyDown(event, this)">${canvas.name}</span>
+                    </div>
+                `;
+            }).join('');
+
+            tree.innerHTML = foldersHtml + rootNotesHtml + canvasesHtml;
             attachNoteClickHandlers();
+            attachCanvasClickHandlers();
         }
 
         function renderFolders(items, level = 0) {
@@ -930,7 +1167,7 @@
                     'improving': '🟡',
                     'standardized': '🟢'
                 };
-                const statusIcon = item.status && statusIcons[item.status] ? `<span style="font-size: 10px; margin-left: 4px;">${statusIcons[item.status]}</span>` : '';
+                const statusIcon = item.status && item.status !== 'none' && statusIcons[item.status] ? `<span style="font-size: 10px; margin-left: 4px;">${statusIcons[item.status]}</span>` : '';
 
                 return `
                     <div>
@@ -946,7 +1183,7 @@
                         </div>
                         <div class="tree-children ${isExpanded ? 'expanded' : ''}" id="folder-${item.id}">
                             ${item.notes ? item.notes.map(note => {
-                                const noteStatus = note.status && statusIcons[note.status] ? `<span style="font-size: 10px; margin-left: auto;">${statusIcons[note.status]}</span>` : '';
+                                const noteStatus = note.status && note.status !== 'none' && statusIcons[note.status] ? `<span style="font-size: 10px; margin-left: auto;">${statusIcons[note.status]}</span>` : '';
                                 return `
                                 <div class="tree-item note-tree-item" draggable="true" data-type="note" data-note-id="${note.id}">
                                     <span class="tree-item-icon" style="visibility: hidden;"></span>
@@ -989,6 +1226,57 @@
             });
         }
 
+        // Handle canvas click - attach after render
+        function attachCanvasClickHandlers() {
+            document.querySelectorAll('.canvas-tree-item').forEach(item => {
+                // Click handler
+                item.addEventListener('click', (e) => {
+                    // Don't open if editing, right-clicking, or if it's part of drag
+                    if (e.target.contentEditable === 'true' || e.button === 2 || item.dataset.isDragging === 'true') {
+                        return;
+                    }
+                    const canvasId = item.dataset.canvasId;
+                    if (canvasId) {
+                        openCanvas(canvasId);
+                    }
+                });
+                
+                // Prevent click when dragging
+                item.addEventListener('dragstart', (e) => {
+                    item.dataset.isDragging = 'true';
+                });
+                
+                item.addEventListener('dragend', (e) => {
+                    setTimeout(() => {
+                        delete item.dataset.isDragging;
+                    }, 100);
+                });
+            });
+        }
+
+        async function openCanvas(canvasId) {
+            // Load canvas data
+            const res = await fetch(`/api/canvases/${canvasId}`);
+            const canvasData = await res.json();
+            
+            // Update current canvas
+            currentCanvasId = canvasId;
+            
+            // Show canvas wrapper, hide others
+            document.getElementById('canvas-wrapper').style.display = 'block';
+            document.getElementById('welcome-screen').style.display = 'none';
+            document.getElementById('note-panel').style.display = 'none';
+            
+            // Update current cards to show only cards from this canvas
+            cards = canvasData.cards || [];
+            renderCards();
+            
+            // Update page title and indicator
+            document.title = `${canvasData.name} - System Sight`;
+            document.getElementById('canvas-indicator').style.display = 'flex';
+            document.getElementById('canvas-name').textContent = canvasData.name;
+        }
+
         function toggleFolder(folderId, event) {
             // If editing, don't toggle
             const target = event.target;
@@ -1023,7 +1311,14 @@
                 return;
             }
 
-            const endpoint = type === 'folder' ? `/api/folders/${id}` : `/api/notes/${id}`;
+            let endpoint;
+            if (type === 'folder') {
+                endpoint = `/api/folders/${id}`;
+            } else if (type === 'note') {
+                endpoint = `/api/notes/${id}`;
+            } else if (type === 'canvas') {
+                endpoint = `/api/canvases/${id}`;
+            }
             
             const res = await fetch(endpoint, {
                 method: 'PUT',
@@ -1045,9 +1340,20 @@
                 if (noteData.folder_id) {
                     await updateFolderCards(noteData.folder_id);
                 }
+            } else if (type === 'canvas') {
+                // Update canvas name in indicator if this is the current canvas
+                if (currentCanvasId == id) {
+                    document.getElementById('canvas-name').textContent = newName;
+                    document.title = `${newName} - System Sight`;
+                }
             }
             
-            loadFolders();
+            await loadFolders();
+            
+            // Reload current canvas if we're viewing one
+            if (currentCanvasId && type === 'canvas' && currentCanvasId == id) {
+                await openCanvas(currentCanvasId);
+            }
         }
 
         // Enable inline editing on double click
@@ -1338,7 +1644,12 @@
                             'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                         },
-                        body: JSON.stringify({ note_id: draggedNoteId, position_x: x, position_y: y })
+                        body: JSON.stringify({ 
+                            note_id: draggedNoteId, 
+                            position_x: x, 
+                            position_y: y,
+                            canvas_id: currentCanvasId
+                        })
                     });
 
                     const card = await res.json();
@@ -1383,7 +1694,12 @@
                             'Content-Type': 'application/json',
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                         },
-                        body: JSON.stringify({ folder_id: draggedFolderId, position_x: x, position_y: y })
+                        body: JSON.stringify({ 
+                            folder_id: draggedFolderId, 
+                            position_x: x, 
+                            position_y: y,
+                            canvas_id: currentCanvasId
+                        })
                     });
 
                     const folderCard = await res.json();
@@ -1642,14 +1958,16 @@
 
             cards.forEach(card => {
                 if (card.linked_notes && Array.isArray(card.linked_notes)) {
-                    card.linked_notes.forEach(linkedNote => {
-                        // Use loose equality (==) to handle string/number ID mismatch
+                    card.linked_notes.forEach(linkedItem => {
+                        // Determine if linked item is a note or folder by checking pivot data
+                        // If pivot has linked_note_id, it's a note; if linked_folder_id, it's a folder
+                        const isNote = linkedItem.pivot && linkedItem.pivot.linked_note_id != null;
+                        const isFolder = linkedItem.pivot && linkedItem.pivot.linked_folder_id != null;
+                        
                         // Find target card by note_id or folder_id
                         const targetCard = cards.find(c => {
-                            // Check if target is a note card
-                            if (c.note && c.note.id == linkedNote.id) return true;
-                            // Check if target is a folder card
-                            if (c.folder && c.folder.id == linkedNote.id) return true;
+                            if (isNote && c.note && c.note.id == linkedItem.id) return true;
+                            if (isFolder && c.folder && c.folder.id == linkedItem.id) return true;
                             return false;
                         });
                         
@@ -1659,13 +1977,8 @@
                             } catch (e) {
                                 console.error('Error drawing line:', e, 'card:', card, 'targetCard:', targetCard);
                             }
-                        } else {
-                            console.warn('Target card not found for linked item:', linkedNote, 'Available cards:', cards.map(c => ({
-                                id: c.id,
-                                noteId: c.note?.id,
-                                folderId: c.folder?.id
-                            })));
                         }
+                        // Removed warning - it's normal for linked items to not have cards on canvas
                     });
                 }
             });
@@ -1780,7 +2093,7 @@
                 card.position_y = parseFloat(card.position_y);
 
                 const cardEl = document.createElement('div');
-                cardEl.className = 'card';
+                cardEl.className = 'card' + (card.id == selectedCardId ? ' selected' : '');
                 cardEl.dataset.cardId = card.id;
                 cardEl.style.left = `${card.position_x * zoom + panX}px`;
                 cardEl.style.top = `${card.position_y * zoom + panY}px`;
@@ -1794,7 +2107,7 @@
                     const showDetails = zoom >= 0.8;
                     
                     // Show description (max 2 lines) instead of note count
-                    const folderDescription = card.folder.description || 'No description';
+                    const folderDescription = card.folder.description || '';
                     const descriptionPreview = folderDescription.length > 100 ? folderDescription.substring(0, 100) + '...' : folderDescription;
                     
                     const notesListHtml = showDetails && card.folder.notes && card.folder.notes.length > 0 ? `
@@ -1803,18 +2116,16 @@
                                 <div class="card-link" onclick="openNote(${note.id})">� ${note.name}</div>
                             `).join('')}
                         </div>
-                    ` : (showDetails && (!card.folder.notes || card.folder.notes.length === 0) ? '<div style="color: #8e8e8e; font-size: 12px; margin-top: 8px;">No notes in this folder</div>' : '');
+                    ` : (showDetails && (!card.folder.notes || card.folder.notes.length === 0) ? '' : '');
 
                     cardEl.innerHTML = `
                         <div class="card-header">📁 ${card.folder.name}</div>
                         ${showDetails ? `<div class="card-subheader" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;">${descriptionPreview}</div>` : ''}
                         ${notesListHtml}
-                        ${showDetails ? `
                         <div class="card-actions">
                             <button onclick="openFolder(${card.folder.id})" class="card-btn">View</button>
                             <button onclick="deleteCard(${card.id})" class="card-btn delete">Delete</button>
                         </div>
-                        ` : ''}
                         <div class="connection-handle left" data-card-id="${card.id}"></div>
                         <div class="connection-handle right" data-card-id="${card.id}"></div>
                     `;
@@ -1843,12 +2154,10 @@
                         <div class="card-header">${card.note.name}</div>
                         ${showDetails ? `<div class="card-subheader">${card.note.content ? card.note.content.substring(0, 100) + '...' : 'Empty note'}</div>` : ''}
                         ${linksHtml}
-                        ${showDetails ? `
                         <div class="card-actions">
                             <button onclick="openNote(${card.note.id})" class="card-btn">Edit</button>
                             <button onclick="deleteCard(${card.id})" class="card-btn delete">Delete</button>
                         </div>
-                        ` : ''}
                         <div class="connection-handle left" data-card-id="${card.id}"></div>
                         <div class="connection-handle right" data-card-id="${card.id}"></div>
                     `;
@@ -1869,9 +2178,18 @@
                     if (e.target.classList.contains('connection-handle')) return;
 
                     if (e.target.tagName !== 'BUTTON' && !e.target.classList.contains('card-link')) {
+                        selectedCardId = card.id;
+                        renderCards();
+                        
                         draggedCard = card;
                         dragStartX = e.clientX;
                         dragStartY = e.clientY;
+                    } else {
+                        // Still select if clicking a button/link
+                        if (selectedCardId !== card.id) {
+                            selectedCardId = card.id;
+                            renderCards();
+                        }
                     }
                 });
 
@@ -1887,6 +2205,10 @@
         // Pan canvas
         canvas.addEventListener('mousedown', (e) => {
             if (!draggedCard && e.target === canvas) {
+                if (selectedCardId !== null) {
+                    selectedCardId = null;
+                    renderCards();
+                }
                 isDragging = true;
                 dragStartX = e.clientX - panX;
                 dragStartY = e.clientY - panY;
@@ -2145,6 +2467,44 @@
             }, 100);
         }
 
+        async function createCanvas() {
+            const name = prompt('Canvas name:', 'New Canvas');
+            if (!name) return;
+            
+            const res = await fetch('/api/canvases', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({ name: name })
+            });
+
+            const newCanvas = await res.json();
+            await loadFolders();
+            
+            // Find and edit the new canvas
+            setTimeout(() => {
+                const canvasElements = document.querySelectorAll('.tree-item[data-type="canvas"]');
+                canvasElements.forEach(el => {
+                    if (el.dataset.canvasId == newCanvas.id) {
+                        const nameEl = el.querySelector('.tree-item-name');
+                        nameEl.dataset.originalText = nameEl.textContent;
+                        nameEl.contentEditable = 'true';
+                        el.classList.add('editing');
+                        nameEl.focus();
+                        
+                        // Select all text
+                        const range = document.createRange();
+                        range.selectNodeContents(nameEl);
+                        const sel = window.getSelection();
+                        sel.removeAllRanges();
+                        sel.addRange(range);
+                    }
+                });
+            }, 100);
+        }
+
         async function createNote(folderId = null) {
             console.log('Creating new note...', folderId ? `in folder ${folderId}` : 'in root');
             try {
@@ -2219,18 +2579,24 @@
             const note = await res.json();
             
             const statusColors = {
+                'none': 'transparent',
                 'draft': '#ef4444',
                 'improving': '#f59e0b',
                 'standardized': '#10b981'
             };
-            const currentColor = statusColors[note.status || 'draft'];
+            const currentColor = statusColors[note.status || 'none'];
+            const showStatusIndicator = note.status && note.status !== 'none';
+            
+            // Render markdown content
+            const renderedContent = note.content ? marked.parse(note.content) : '';
 
-            modalContent.innerHTML = `
+            const notePanel = document.getElementById('note-panel');
+            notePanel.innerHTML = `
                 <div class="modal-header">
                     <div style="display: flex; flex-direction: column; gap: 4px;">
                         <h3 style="display: flex; align-items: center; gap: 8px;">
                             ${note.name}
-                            <span style="width: 12px; height: 12px; border-radius: 50%; background: ${currentColor};" title="Status indicator"></span>
+                            ${showStatusIndicator ? `<span style="width: 12px; height: 12px; border-radius: 50%; background: ${currentColor};" title="Status indicator"></span>` : ''}
                             <span style="font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #e0e0e0; color: #555;">v${note.current_version || 1}</span>
                         </h3>
                     </div>
@@ -2238,23 +2604,74 @@
                         <button onclick="toggleHistory()" class="btn btn-secondary" title="View History">
                             <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M13.5,8H12V13L16.28,15.54L17,14.33L13.5,12.25V8M13,3A9,9 0 0,0 4,12H1L4.96,16.03L9,12H6A7,7 0 0,1 13,5A7,7 0 0,1 20,12A7,7 0 0,1 13,19C11.07,19 9.32,18.21 8.06,16.94L6.64,18.36C8.27,20 10.5,21 13,21A9,9 0 0,0 22,12A9,9 0 0,0 13,3"/></svg>
                         </button>
+                        <button onclick="togglePreview()" class="btn btn-secondary" id="preview-btn" style="display: none;" title="Toggle Preview">
+                            <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>
+                        </button>
                         <button onclick="editNote(${note.id})" class="btn btn-primary" id="edit-btn">Edit</button>
-                        <button onclick="closeModal()" class="btn btn-secondary">Close</button>
+                        <button onclick="closeNotePanel()" class="btn btn-secondary">Close</button>
                     </div>
                 </div>
-                <div class="modal-body">
-                    <div class="note-content-view" id="note-view">${note.content || ''}</div>
-                    <div id="edit-container" style="display: none;">
-                        <textarea id="note-content">${note.content || ''}</textarea>
+                <div style="flex: 1; overflow-y: auto; padding: 24px; max-width: 1400px; margin: 0 auto; width: 100%;">
+                    <div class="note-content-view" id="note-view">${renderedContent || '<i style="color: #999;">Empty note</i>'}</div>
+                    <div id="edit-container" style="display: none; height: 100%;">
+                        <!-- Markdown Toolbar -->
+                        <div style="display: flex; gap: 4px; padding: 8px; background: #f6f8fa; border: 1px solid #e5e5e5; border-bottom: none; border-radius: 6px 6px 0 0;">
+                            <button type="button" onclick="insertMarkdown('**', '**', 'bold text')" class="md-btn" title="Bold (Ctrl+B)">
+                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M13.5,15.5H10V12.5H13.5A1.5,1.5 0 0,1 15,14A1.5,1.5 0 0,1 13.5,15.5M10,6.5H13A1.5,1.5 0 0,1 14.5,8A1.5,1.5 0 0,1 13,9.5H10M15.6,10.79C16.57,10.11 17.25,9 17.25,8C17.25,5.74 15.5,4 13.25,4H7V18H14.04C16.14,18 17.75,16.3 17.75,14.21C17.75,12.69 16.89,11.39 15.6,10.79Z"/></svg>
+                            </button>
+                            <button type="button" onclick="insertMarkdown('*', '*', 'italic text')" class="md-btn" title="Italic (Ctrl+I)">
+                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M10,4V7H12.21L8.79,15H6V18H14V15H11.79L15.21,7H18V4H10Z"/></svg>
+                            </button>
+                            <button type="button" onclick="insertMarkdown('~~', '~~', 'strikethrough')" class="md-btn" title="Strikethrough">
+                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M23,12V14H18.61C19.61,16.14 19.56,22 12.38,22C4.05,22.05 4.37,15.5 4.37,15.5L8.34,15.55C8.37,18.92 11.5,18.92 12.12,18.88C12.76,18.83 15.15,18.84 15.34,16.5C15.42,15.41 14.32,14.58 13.12,14H1V12H23M19.41,7.89L15.43,7.86C15.43,7.86 15.6,5.09 12.15,5.08C8.7,5.06 9,7.28 9,7.56C9.04,7.84 9.34,9.22 12,9.88H5.71C5.71,9.88 2.22,3.15 10.74,2C19.45,0.8 19.43,7.91 19.41,7.89Z"/></svg>
+                            </button>
+                            <div style="width: 1px; background: #e5e5e5; margin: 0 4px;"></div>
+                            <button type="button" onclick="insertHeading(1)" class="md-btn" title="Heading 1">H1</button>
+                            <button type="button" onclick="insertHeading(2)" class="md-btn" title="Heading 2">H2</button>
+                            <button type="button" onclick="insertHeading(3)" class="md-btn" title="Heading 3">H3</button>
+                            <div style="width: 1px; background: #e5e5e5; margin: 0 4px;"></div>
+                            <button type="button" onclick="insertInlineCode()" class="md-btn" title="Inline Code">
+                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M8,3A2,2 0 0,0 6,5V9A2,2 0 0,1 4,11H3V13H4A2,2 0 0,1 6,15V19A2,2 0 0,0 8,21H10V19H8V14A2,2 0 0,0 6,12A2,2 0 0,0 8,10V5H10V3M16,3A2,2 0 0,1 18,5V9A2,2 0 0,0 20,11H21V13H20A2,2 0 0,0 18,15V19A2,2 0 0,1 16,21H14V19H16V14A2,2 0 0,1 18,12A2,2 0 0,1 16,10V5H14V3H16Z"/></svg>
+                            </button>
+                            <button type="button" onclick="insertCodeBlock()" class="md-btn" title="Code Block">
+                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M14.6,16.6L19.2,12L14.6,7.4L16,6L22,12L16,18L14.6,16.6M9.4,16.6L4.8,12L9.4,7.4L8,6L2,12L8,18L9.4,16.6Z"/></svg>
+                            </button>
+                            <div style="width: 1px; background: #e5e5e5; margin: 0 4px;"></div>
+                            <button type="button" onclick="insertList('- ')" class="md-btn" title="Bullet List">
+                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M7,5H21V7H7V5M7,13V11H21V13H7M4,4.5A1.5,1.5 0 0,1 5.5,6A1.5,1.5 0 0,1 4,7.5A1.5,1.5 0 0,1 2.5,6A1.5,1.5 0 0,1 4,4.5M4,10.5A1.5,1.5 0 0,1 5.5,12A1.5,1.5 0 0,1 4,13.5A1.5,1.5 0 0,1 2.5,12A1.5,1.5 0 0,1 4,10.5M7,19V17H21V19H7M4,16.5A1.5,1.5 0 0,1 5.5,18A1.5,1.5 0 0,1 4,19.5A1.5,1.5 0 0,1 2.5,18A1.5,1.5 0 0,1 4,16.5Z"/></svg>
+                            </button>
+                            <button type="button" onclick="insertList('1. ')" class="md-btn" title="Numbered List">
+                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M7,13V11H21V13H7M7,19V17H21V19H7M7,7V5H21V7H7M3,8V5H2V4H4V8H3M2,17V16H5V20H2V19H4V18.5H3V17.5H4V17H2M4.25,10A0.75,0.75 0 0,1 5,10.75C5,10.95 4.92,11.14 4.79,11.27L3.12,13H5V14H2V13.08L4,11H2V10H4.25Z"/></svg>
+                            </button>
+                            <button type="button" onclick="insertChecklist()" class="md-btn" title="Checklist">
+                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M19,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5A2,2 0 0,0 19,3M10,17L5,12L6.41,10.58L10,14.17L17.59,6.58L19,8L10,17Z"/></svg>
+                            </button>
+                            <div style="width: 1px; background: #e5e5e5; margin: 0 4px;"></div>
+                            <button type="button" onclick="insertLink()" class="md-btn" title="Link">
+                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M3.9,12C3.9,10.29 5.29,8.9 7,8.9H11V7H7A5,5 0 0,0 2,12A5,5 0 0,0 7,17H11V15.1H7C5.29,15.1 3.9,13.71 3.9,12M8,13H16V11H8V13M17,7H13V8.9H17C18.71,8.9 20.1,10.29 20.1,12C20.1,13.71 18.71,15.1 17,15.1H13V17H17A5,5 0 0,0 22,12A5,5 0 0,0 17,7Z"/></svg>
+                            </button>
+                            <button type="button" onclick="insertQuote()" class="md-btn" title="Quote">
+                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M14,17H17L19,13V7H13V13H16M6,17H9L11,13V7H5V13H8L6,17Z"/></svg>
+                            </button>
+                        </div>
+                        <div class="split-editor">
+                            <div class="editor-side">
+                                <textarea id="note-content" oninput="updatePreview()">${note.content || ''}</textarea>
+                            </div>
+                            <div class="preview-side note-content-view" id="preview-view"></div>
+                        </div>
                         
                         <div style="margin-top: 12px;">
                             <label style="display: block; font-size: 12px; color: #666; margin-bottom: 8px;">Status Color</label>
                             <div style="display: flex; gap: 8px;">
+                                <button type="button" onclick="selectStatus('none')" class="status-color-btn" data-status="none" style="width: 32px; height: 32px; border-radius: 6px; border: 2px solid ${!note.status || note.status === 'none' ? '#333' : '#ddd'}; background: white; cursor: pointer; transition: all 0.15s; position: relative;" title="None">
+                                    <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); fill: #999;"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
+                                </button>
                                 <button type="button" onclick="selectStatus('draft')" class="status-color-btn" data-status="draft" style="width: 32px; height: 32px; border-radius: 6px; border: 2px solid ${note.status === 'draft' ? '#333' : '#ddd'}; background: #ef4444; cursor: pointer; transition: all 0.15s;" title="Red - Issues/Draft"></button>
                                 <button type="button" onclick="selectStatus('improving')" class="status-color-btn" data-status="improving" style="width: 32px; height: 32px; border-radius: 6px; border: 2px solid ${note.status === 'improving' ? '#333' : '#ddd'}; background: #f59e0b; cursor: pointer; transition: all 0.15s;" title="Yellow - In Progress"></button>
                                 <button type="button" onclick="selectStatus('standardized')" class="status-color-btn" data-status="standardized" style="width: 32px; height: 32px; border-radius: 6px; border: 2px solid ${note.status === 'standardized' ? '#333' : '#ddd'}; background: #10b981; cursor: pointer; transition: all 0.15s;" title="Green - Complete"></button>
                             </div>
-                            <input type="hidden" id="note-status" value="${note.status || 'draft'}">
+                            <input type="hidden" id="note-status" value="${note.status || 'none'}">
                         </div>
 
                         <input type="text" id="change-note" placeholder="Describe your changes (optional)..." style="width: 100%; margin-top: 12px; padding: 8px; border: 1px solid #e0e0e0; border-radius: 4px; box-sizing: border-box;">
@@ -2267,11 +2684,28 @@
                 </div>
             `;
             
-            // Store versions for history view
-            modal.dataset.versions = JSON.stringify(note.versions || []);
-
-            modal.classList.add('active');
-            modal.dataset.noteId = noteId;
+            // Store note data
+            notePanel.dataset.noteId = noteId;
+            notePanel.dataset.versions = JSON.stringify(note.versions || []);
+            
+            // Show note panel, hide others
+            document.getElementById('welcome-screen').style.display = 'none';
+            document.getElementById('canvas-wrapper').style.display = 'none';
+            notePanel.style.display = 'flex';
+        }
+        
+        function closeNotePanel() {
+            const notePanel = document.getElementById('note-panel');
+            notePanel.style.display = 'none';
+            
+            // If a canvas is currently open, show it; otherwise show welcome screen
+            if (currentCanvasId) {
+                document.getElementById('canvas-wrapper').style.display = 'block';
+                document.getElementById('welcome-screen').style.display = 'none';
+            } else {
+                document.getElementById('welcome-screen').style.display = 'flex';
+                document.getElementById('canvas-wrapper').style.display = 'none';
+            }
         }
 
         function editNote(noteId) {
@@ -2283,9 +2717,164 @@
             editContainer.style.display = 'block';
             document.getElementById('note-content').focus();
             
+            // Initialize preview
+            updatePreview();
+            
             editBtn.textContent = 'Save';
             editBtn.onclick = () => saveNote(noteId);
         }
+        
+        function updatePreview() {
+            const content = document.getElementById('note-content').value;
+            const previewView = document.getElementById('preview-view');
+            const renderedContent = content ? marked.parse(content) : '<i style="color: #999;">Empty note</i>';
+            previewView.innerHTML = renderedContent;
+        }
+        
+        let isPreviewMode = false;
+        function togglePreview() {
+            const editContainer = document.getElementById('edit-container');
+            const previewView = document.getElementById('preview-view');
+            const previewBtn = document.getElementById('preview-btn');
+            
+            isPreviewMode = !isPreviewMode;
+            
+            if (isPreviewMode) {
+                editContainer.style.display = 'none';
+                previewView.style.display = 'block';
+                previewBtn.textContent = 'Edit';
+            } else {
+                editContainer.style.display = 'block';
+                previewView.style.display = 'none';
+                previewBtn.textContent = 'Preview';
+            }
+        }
+        
+        // Markdown helper functions
+        function insertMarkdown(before, after, placeholder) {
+            const textarea = document.getElementById('note-content');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            const textToInsert = selectedText || placeholder;
+            const newText = before + textToInsert + after;
+            
+            textarea.value = textarea.value.substring(0, start) + newText + textarea.value.substring(end);
+            
+            // Set cursor position
+            if (selectedText) {
+                textarea.selectionStart = start;
+                textarea.selectionEnd = start + newText.length;
+            } else {
+                textarea.selectionStart = start + before.length;
+                textarea.selectionEnd = start + before.length + textToInsert.length;
+            }
+            
+            textarea.focus();
+            updatePreview();
+        }
+        
+        function insertHeading(level) {
+            const textarea = document.getElementById('note-content');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            const prefix = '#'.repeat(level) + ' ';
+            const textToInsert = selectedText || 'Heading';
+            
+            // Check if we're at the start of a line
+            const beforeCursor = textarea.value.substring(0, start);
+            const lastNewline = beforeCursor.lastIndexOf('\n');
+            const lineStart = lastNewline === -1 ? 0 : lastNewline + 1;
+            const isStartOfLine = start === lineStart;
+            
+            if (isStartOfLine) {
+                textarea.value = textarea.value.substring(0, start) + prefix + textToInsert + textarea.value.substring(end);
+                textarea.selectionStart = start + prefix.length;
+                textarea.selectionEnd = start + prefix.length + textToInsert.length;
+            } else {
+                textarea.value = textarea.value.substring(0, start) + '\n' + prefix + textToInsert + textarea.value.substring(end);
+                textarea.selectionStart = start + 1 + prefix.length;
+                textarea.selectionEnd = start + 1 + prefix.length + textToInsert.length;
+            }
+            
+            textarea.focus();
+            updatePreview();
+        }
+        
+        function insertList(prefix) {
+            const textarea = document.getElementById('note-content');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            
+            // Check if we're at the start of a line
+            const beforeCursor = textarea.value.substring(0, start);
+            const lastNewline = beforeCursor.lastIndexOf('\n');
+            const lineStart = lastNewline === -1 ? 0 : lastNewline + 1;
+            const isStartOfLine = start === lineStart;
+            
+            const textToInsert = selectedText || 'List item';
+            
+            if (isStartOfLine) {
+                textarea.value = textarea.value.substring(0, start) + prefix + textToInsert + textarea.value.substring(end);
+                textarea.selectionStart = start + prefix.length;
+                textarea.selectionEnd = start + prefix.length + textToInsert.length;
+            } else {
+                textarea.value = textarea.value.substring(0, start) + '\n' + prefix + textToInsert + textarea.value.substring(end);
+                textarea.selectionStart = start + 1 + prefix.length;
+                textarea.selectionEnd = start + 1 + prefix.length + textToInsert.length;
+            }
+            
+            textarea.focus();
+            updatePreview();
+        }
+        
+        function insertCodeBlock() {
+            const textarea = document.getElementById('note-content');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            const textToInsert = selectedText || 'code here';
+            
+            const codeBlock = '```\n' + textToInsert + '\n```';
+            
+            textarea.value = textarea.value.substring(0, start) + codeBlock + textarea.value.substring(end);
+            textarea.selectionStart = start + 4;
+            textarea.selectionEnd = start + 4 + textToInsert.length;
+            textarea.focus();
+            updatePreview();
+        }
+        
+        function insertInlineCode() {
+            insertMarkdown('`', '`', 'code');
+        }
+        
+        function insertChecklist() {
+            insertList('- [ ] ');
+        }
+        
+        function insertLink() {
+            insertMarkdown('[', '](url)', 'link text');
+        }
+        
+        function insertQuote() {
+            insertMarkdown('> ', '', 'quote');
+        }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            const textarea = document.getElementById('note-content');
+            if (!textarea || document.activeElement !== textarea) return;
+            
+            if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+                e.preventDefault();
+                insertMarkdown('**', '**', 'bold text');
+            } else if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
+                e.preventDefault();
+                insertMarkdown('*', '*', 'italic text');
+            }
+        });
 
         async function saveNote(noteId) {
             const content = document.getElementById('note-content').value;
@@ -2309,24 +2898,36 @@
             const res = await fetch(`/api/notes/${noteId}`);
             const note = await res.json();
 
-            // Update view
+            // Update view with rendered markdown
             const viewEl = document.getElementById('note-view');
             const editContainer = document.getElementById('edit-container');
+            const previewView = document.getElementById('preview-view');
             const editBtn = document.getElementById('edit-btn');
+            const previewBtn = document.getElementById('preview-btn');
             
-            viewEl.textContent = content;
+            const renderedContent = content ? marked.parse(content) : '<i style="color: #999;">Empty note</i>';
+            viewEl.innerHTML = renderedContent;
             viewEl.style.display = 'block';
             editContainer.style.display = 'none';
+            isPreviewMode = false;
             
             // Update status color indicator in header
             const statusColors = {
                 'draft': '#ef4444',
                 'improving': '#f59e0b',
-                'standardized': '#10b981'
+                'standardized': '#10b981',
+                'none': 'transparent'
             };
             const statusIndicator = document.querySelector('.modal-header h3 span[title="Status indicator"]');
             if (statusIndicator) {
-                statusIndicator.style.background = statusColors[note.status || 'draft'];
+                if (note.status === 'none') {
+                    // Hide status indicator for 'none' status
+                    statusIndicator.style.display = 'none';
+                } else {
+                    // Show and update color for other statuses
+                    statusIndicator.style.display = 'inline-block';
+                    statusIndicator.style.background = statusColors[note.status || 'draft'];
+                }
             }
             
             // Update version badge
@@ -2375,9 +2976,14 @@
                     </div>
                 </div>
                 <div class="modal-body">
-                    <div class="note-content-view" id="folder-view">${folder.description || '<i style="color: #999;">No description</i>'}</div>
-                    <div id="folder-edit-container" style="display: none;">
-                        <textarea id="folder-description" placeholder="Enter folder description...">${folder.description || ''}</textarea>
+                    <div class="note-content-view" id="folder-view">${folder.description || ''}</div>
+                    <div id="folder-edit-container" style="display: none; height: 100%;">
+                        <div class="split-editor" style="height: 400px; min-height: 400px;">
+                            <div class="editor-side">
+                                <textarea id="folder-description" placeholder="Enter folder description..." oninput="updateFolderPreview()">${folder.description || ''}</textarea>
+                            </div>
+                            <div class="preview-side note-content-view" id="folder-preview-view"></div>
+                        </div>
                     </div>
                     
                     ${folder.notes && folder.notes.length > 0 ? `
@@ -2432,8 +3038,18 @@
             editContainer.style.display = 'block';
             document.getElementById('folder-description').focus();
             
+            // Initialize preview
+            updateFolderPreview();
+            
             editBtn.textContent = 'Save';
             editBtn.onclick = () => saveFolder(folderId);
+        }
+
+        function updateFolderPreview() {
+            const content = document.getElementById('folder-description').value;
+            const previewView = document.getElementById('folder-preview-view');
+            const renderedContent = content ? marked.parse(content) : '';
+            if (previewView) previewView.innerHTML = renderedContent;
         }
 
         async function saveFolder(folderId) {
@@ -2460,7 +3076,7 @@
             const editContainer = document.getElementById('folder-edit-container');
             const editBtn = document.getElementById('edit-folder-btn');
             
-            viewEl.innerHTML = description || '<i style="color: #999;">No description</i>';
+            viewEl.innerHTML = description || '';
             viewEl.style.display = 'block';
             editContainer.style.display = 'none';
             

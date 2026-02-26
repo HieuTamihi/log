@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class NoteCard extends Model
 {
-    protected $fillable = ['note_id', 'folder_id', 'user_id', 'position_x', 'position_y', 'zoom_level'];
+    protected $fillable = ['note_id', 'folder_id', 'user_id', 'canvas_id', 'position_x', 'position_y', 'zoom_level'];
 
     public function note()
     {
@@ -21,6 +21,11 @@ class NoteCard extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function canvas()
+    {
+        return $this->belongsTo(Canvas::class);
     }
 
     public function linkedNotes()

@@ -32,4 +32,9 @@ class Folder extends Model
     {
         return $this->belongsTo(User::class, 'manager_id');
     }
+
+    public function canvases()
+    {
+        return $this->hasMany(Canvas::class);
+    }
 }

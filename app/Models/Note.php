@@ -42,4 +42,14 @@ class Note extends Model
     {
         return $this->belongsToMany(NoteCard::class, 'card_links', 'linked_note_id', 'card_id');
     }
+
+    public function attachments()
+    {
+        return $this->hasMany(NoteAttachment::class);
+    }
+
+    public function tabs()
+    {
+        return $this->hasMany(NoteTab::class)->orderBy('order');
+    }
 }

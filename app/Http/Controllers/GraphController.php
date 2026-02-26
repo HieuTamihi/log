@@ -11,7 +11,6 @@ class GraphController extends Controller
     public function index()
     {
         $cards = NoteCard::with(['note', 'linkedNotes', 'linkedFolders', 'folder.notes'])
-            ->where('user_id', auth()->id())
             ->get();
 
         // Merge linked notes and folders into a single array for frontend
@@ -39,6 +38,7 @@ class GraphController extends Controller
         $validated = $request->validate([
             'note_id' => 'required_without:folder_id|exists:notes,id',
             'folder_id' => 'required_without:note_id|exists:folders,id',
+            'canvas_id' => 'nullable|exists:canvases,id',
             'position_x' => 'required|numeric',
             'position_y' => 'required|numeric',
         ]);
@@ -46,6 +46,7 @@ class GraphController extends Controller
         $card = NoteCard::create([
             'note_id' => $validated['note_id'] ?? null,
             'folder_id' => $validated['folder_id'] ?? null,
+            'canvas_id' => $validated['canvas_id'] ?? null,
             'user_id' => auth()->id(),
             'position_x' => $validated['position_x'],
             'position_y' => $validated['position_y'],
@@ -73,12 +74,14 @@ class GraphController extends Controller
     {
         $validated = $request->validate([
             'folder_id' => 'required|exists:folders,id',
+            'canvas_id' => 'nullable|exists:canvases,id',
             'position_x' => 'required|numeric',
             'position_y' => 'required|numeric',
         ]);
 
         $card = NoteCard::create([
             'folder_id' => $validated['folder_id'],
+            'canvas_id' => $validated['canvas_id'] ?? null,
             'user_id' => auth()->id(),
             'position_x' => $validated['position_x'],
             'position_y' => $validated['position_y'],

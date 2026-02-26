@@ -10,7 +10,6 @@ class FolderController extends Controller
     public function index()
     {
         $folders = Folder::with('children', 'notes')
-            ->where('user_id', auth()->id())
             ->whereNull('parent_id')
             ->get();
 
@@ -117,7 +116,6 @@ class FolderController extends Controller
                 'children.children.children.notes',
                 'notes'
             ])
-            ->where('user_id', auth()->id())
             ->whereNull('parent_id')
             ->get();
 

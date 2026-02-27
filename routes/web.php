@@ -56,6 +56,16 @@ Route::middleware('auth')->group(function () {
     // Users API
     Route::get('/api/users', [UserController::class, 'index'])->name('users.index');
 
+    // Resources API (Media Library)
+    Route::get('/api/resources', [App\Http\Controllers\ResourceController::class, 'index'])->name('resources.index');
+    Route::post('/api/resources', [App\Http\Controllers\ResourceController::class, 'store'])->name('resources.store');
+    Route::get('/api/resources/categories', [App\Http\Controllers\ResourceController::class, 'categories'])->name('resources.categories');
+    Route::get('/api/resources/{resource}', [App\Http\Controllers\ResourceController::class, 'show'])->name('resources.show');
+    Route::get('/api/resources/{resource}/download', [App\Http\Controllers\ResourceController::class, 'download'])->name('resources.download');
+    Route::put('/api/resources/{resource}', [App\Http\Controllers\ResourceController::class, 'update'])->name('resources.update');
+    Route::delete('/api/resources/{resource}', [App\Http\Controllers\ResourceController::class, 'destroy'])->name('resources.destroy');
+
+
     // Canvas API
     Route::get('/api/canvases', [CanvasController::class, 'index'])->name('canvases.index');
     Route::post('/api/canvases', [CanvasController::class, 'store'])->name('canvases.store');

@@ -185,7 +185,7 @@
                 <div class="filter-row">
                     <div class="filter-group">
                         <label for="search">Search</label>
-                        <input type="text" id="search" name="search" placeholder="Search by details, user, or IP..." value="{{ request('search') }}">
+                        <input type="text" id="search" name="search" placeholder="Search by details, user..." value="{{ request('search') }}">
                     </div>
                     
                     <div class="filter-group">

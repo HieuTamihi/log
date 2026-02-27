@@ -576,25 +576,39 @@
         .split-editor {
             display: flex;
             gap: 0;
-            height: calc(100vh - 400px);
-            min-height: 500px;
+            min-height: 400px;
             border: 1px solid #e5e5e5;
             border-radius: 0 0 6px 6px;
             background: white;
+            align-items: stretch;
         }
 
         .editor-side {
             flex: 1;
-            display: flex;
-            flex-direction: column;
+            min-width: 0;
             border-right: 1px solid #e5e5e5;
+        }
+
+        #note-content {
+            width: 100%;
+            height: auto;
+            min-height: 400px;
+            padding: 16px;
+            border: none;
+            resize: none;
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.6;
+            outline: none;
+            display: block;
+            overflow: hidden;
         }
 
         .preview-side {
             flex: 1;
-            padding: 16px;
-            overflow-y: auto;
-            background: #fafafa;
+            min-width: 0;
+            padding: 24px;
+            background: white;
         }
         
         .modal-actions {
@@ -661,6 +675,16 @@
             background: #f0f0f0;
         }
         
+        .resource-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+        
+        #image-size-modal button[type="button"]:hover {
+            border-color: #0066cc !important;
+            background: #f0f7ff !important;
+        }
+        
         .context-menu-item.danger {
             color: #d32f2f;
         }
@@ -716,10 +740,133 @@
         .history-item:hover { background: #f9f9f9; }
         .history-meta { font-size: 11px; color: #8e8e8e; margin-bottom: 4px; display: flex; justify-content: space-between; }
         .history-note { font-size: 13px; color: #2e2e2e; }
+
+        /* Multi-tab CSS */
+        #note-tabs {
+            display: flex;
+            background: #f0f0f0;
+            padding: 4px 8px 0 8px;
+            border-bottom: 1px solid #e5e5e5;
+            overflow-x: auto;
+            gap: 2px;
+            scrollbar-width: none; /* Firefox */
+        }
+        #note-tabs::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+
+        .note-tab {
+            padding: 8px 16px;
+            background: #e5e5e5;
+            border: 1px solid #dcdcdc;
+            border-bottom: none;
+            border-radius: 6px 6px 0 0;
+            font-size: 13px;
+            color: #666;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 120px;
+            max-width: 200px;
+            position: relative;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .note-tab:hover {
+            background: #ebebeb;
+            color: #333;
+        }
+
+        .note-tab.active {
+            background: white;
+            color: #2e2e2e;
+            border-color: #e5e5e5;
+            font-weight: 500;
+            z-index: 1;
+        }
+
+        .note-tab .tab-name {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .note-tab .tab-close {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #999;
+            transition: all 0.2s;
+        }
+
+        .note-tab .tab-close:hover {
+            background: #ff4d4f;
+            color: white;
+        }
+
+        .note-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: white;
+        }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://unpkg.com/turndown/dist/turndown.js"></script>
+    <script>
+        // Use a custom renderer for marked to handle external links
+        const renderer = new marked.Renderer();
+        const baseLinkRenderer = renderer.link.bind(renderer);
+        
+        renderer.link = function(href, title, text) {
+            // Handle both new API (v4+) which uses a token object, and old API
+            let targetHref, targetTitle, targetText;
+            
+            if (typeof href === 'object' && href !== null) {
+                targetHref = href.href;
+                targetTitle = href.title;
+                targetText = href.text;
+            } else {
+                targetHref = href;
+                targetTitle = title;
+                targetText = text;
+            }
+
+            const safeHref = (typeof targetHref === 'string') ? targetHref : '';
+            const isExternal = safeHref.startsWith('http://') || safeHref.startsWith('https://');
+            
+            if (isExternal) {
+                return `<a href="${safeHref}" onclick="window.open(this.href, '_blank'); return false;" rel="noopener">${targetText || safeHref}</a>`;
+            }
+            
+            return `<a href="${safeHref}">${targetText || safeHref}</a>`;
+        };
+
+        marked.setOptions({
+            renderer: renderer,
+            gfm: true,
+            breaks: true,
+            headerIds: false,
+            mangle: false
+        });
+    </script>
     <style>
+        /* Spin animation for loading */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
         /* Markdown Styles */
         .note-content-view h1,
         .note-content-view h2,
@@ -868,6 +1015,10 @@
                 <button class="icon-btn" onclick="createCanvas()" title="New canvas">
                     <svg viewBox="0 0 24 24"><path d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6H12L10,4M19,19H5V8H19V19M17,12V14H13V18H11V14H7V12H11V8H13V12H17Z"/></svg>
                 </button>
+                <!-- Resource Library -->
+                <button class="icon-btn" onclick="openResourceLibrary()" title="Resource Library" style="color: #0066cc;">
+                    <svg viewBox="0 0 24 24"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13M21,19V5C21,3.89 20.1,3 19,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19M19,19H5V5H19V19Z"/></svg>
+                </button>
                 <!-- Collapse/Expand All -->
                 <button class="icon-btn" onclick="toggleExpandAll()" title="Collapse/Expand all">
                     <svg viewBox="0 0 24 24"><path d="M7,5H21V7H7V5M7,13V11H21V13H7M4,4.5A1.5,1.5 0 0,1 5.5,6A1.5,1.5 0 0,1 4,7.5A1.5,1.5 0 0,1 2.5,6A1.5,1.5 0 0,1 4,4.5M4,10.5A1.5,1.5 0 0,1 5.5,12A1.5,1.5 0 0,1 4,13.5A1.5,1.5 0 0,1 2.5,12A1.5,1.5 0 0,1 4,10.5M7,19V17H21V19H7M4,16.5A1.5,1.5 0 0,1 5.5,18A1.5,1.5 0 0,1 4,19.5A1.5,1.5 0 0,1 2.5,18A1.5,1.5 0 0,1 4,16.5Z"/></svg>
@@ -961,7 +1112,10 @@
 
             <!-- Note Editor Panel -->
             <div id="note-panel" style="position: relative; flex: 1; overflow: hidden; background: #f8f8f8; display: none; flex-direction: column;">
-                <!-- Note content will be loaded here -->
+                <div id="note-tabs"></div>
+                <div id="active-note-container" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
+                    <!-- Note content will be loaded here -->
+                </div>
             </div>
 
             <!-- Canvas Wrapper -->
@@ -1036,6 +1190,71 @@
         </div>
     </div>
     
+    <!-- Resource Context Menu -->
+    <div id="resource-context-menu" style="display: none; position: fixed; background: white; border: 1px solid #e5e5e5; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; z-index: 3000; padding: 4px 0;">
+        <div class="context-menu-item" onclick="resourceContextAction('insert')">
+            <svg viewBox="0 0 24 24"><path d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"/></svg>
+            <span id="resource-insert-text">Insert</span>
+        </div>
+        <div class="context-menu-item" onclick="resourceContextAction('copy')">
+            <svg viewBox="0 0 24 24"><path d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"/></svg>
+            <span>Copy Link</span>
+        </div>
+        <div class="context-menu-item" onclick="resourceContextAction('download')">
+            <svg viewBox="0 0 24 24"><path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z"/></svg>
+            <span>Download</span>
+        </div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item" onclick="resourceContextAction('details')">
+            <svg viewBox="0 0 24 24"><path d="M13,9H11V7H13M13,17H11V11H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg>
+            <span>View Details</span>
+        </div>
+        <div class="context-menu-separator"></div>
+        <div class="context-menu-item danger" onclick="resourceContextAction('delete')">
+            <svg viewBox="0 0 24 24"><path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/></svg>
+            <span>Delete</span>
+        </div>
+    </div>
+    
+    <!-- Image Size Selection Modal -->
+    <div id="image-size-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 4000; align-items: center; justify-content: center;">
+        <div onclick="event.stopPropagation()" style="background: white; padding: 24px; border-radius: 8px; max-width: 400px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
+            <h3 style="margin: 0 0 16px 0; font-size: 16px; color: #333;">Insert Image</h3>
+            
+            <div style="margin-bottom: 16px;">
+                <label style="display: block; font-size: 13px; color: #666; margin-bottom: 8px;">Select Size:</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <button type="button" onclick="insertImageWithSize('original'); event.stopPropagation();" style="padding: 12px; border: 2px solid #e5e5e5; background: white; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+                        <div style="font-weight: 500; margin-bottom: 4px;">Original</div>
+                        <div style="font-size: 11px; color: #999;">Full size</div>
+                    </button>
+                    <button type="button" onclick="insertImageWithSize('large'); event.stopPropagation();" style="padding: 12px; border: 2px solid #e5e5e5; background: white; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+                        <div style="font-weight: 500; margin-bottom: 4px;">Large</div>
+                        <div style="font-size: 11px; color: #999;">800px</div>
+                    </button>
+                    <button type="button" onclick="insertImageWithSize('medium'); event.stopPropagation();" style="padding: 12px; border: 2px solid #e5e5e5; background: white; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+                        <div style="font-weight: 500; margin-bottom: 4px;">Medium</div>
+                        <div style="font-size: 11px; color: #999;">500px</div>
+                    </button>
+                    <button type="button" onclick="insertImageWithSize('small'); event.stopPropagation();" style="padding: 12px; border: 2px solid #e5e5e5; background: white; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+                        <div style="font-weight: 500; margin-bottom: 4px;">Small</div>
+                        <div style="font-size: 11px; color: #999;">300px</div>
+                    </button>
+                    <button type="button" onclick="insertImageWithSize('thumbnail'); event.stopPropagation();" style="padding: 12px; border: 2px solid #e5e5e5; background: white; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+                        <div style="font-weight: 500; margin-bottom: 4px;">Thumbnail</div>
+                        <div style="font-size: 11px; color: #999;">150px</div>
+                    </button>
+                    <button type="button" onclick="insertImageWithSize('custom'); event.stopPropagation();" style="padding: 12px; border: 2px solid #e5e5e5; background: white; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-family: inherit;">
+                        <div style="font-weight: 500; margin-bottom: 4px;">Custom</div>
+                        <div style="font-size: 11px; color: #999;">Enter size</div>
+                    </button>
+                </div>
+            </div>
+            
+            <button type="button" onclick="closeImageSizeModal(); event.stopPropagation();" style="width: 100%; padding: 10px; border: 1px solid #ddd; background: #f5f5f5; border-radius: 4px; cursor: pointer; font-size: 14px; font-family: inherit;">Cancel</button>
+        </div>
+    </div>
+    
     <!-- Status Change Modal -->
     <div id="status-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 2000; align-items: center; justify-content: center;">
         <div style="background: white; padding: 24px; border-radius: 8px; max-width: 300px; width: 90%; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
@@ -1068,6 +1287,61 @@
         </div>
     </div>
 
+    <!-- Resource Library Modal -->
+    <div id="resource-library-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 2000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 8px; width: 90%; max-width: 1200px; height: 85vh; box-shadow: 0 8px 32px rgba(0,0,0,0.2); display: flex; flex-direction: column;">
+            <!-- Header -->
+            <div style="padding: 16px 20px; border-bottom: 1px solid #e5e5e5; display: flex; align-items: center; justify-content: space-between;">
+                <h3 style="margin: 0; font-size: 18px; font-weight: 600;">📚 Resource Library</h3>
+                <button onclick="closeResourceLibrary()" style="border: none; background: none; cursor: pointer; font-size: 24px; color: #6e6e6e;">&times;</button>
+            </div>
+            
+            <!-- Toolbar -->
+            <div style="padding: 12px 20px; border-bottom: 1px solid #e5e5e5; display: flex; gap: 12px; align-items: center; background: #fafafa;">
+                <button onclick="document.getElementById('resource-file-upload').click()" class="btn btn-primary" style="display: flex; align-items: center; gap: 6px;">
+                    <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M9,16V10H5L12,3L19,10H15V16H9M5,20V18H19V20H5Z"/></svg>
+                    Upload
+                </button>
+                <input type="file" id="resource-file-upload" style="display: none;" onchange="uploadResource(event)" multiple>
+                
+                <input type="text" id="resource-search" placeholder="Search resources..." style="flex: 1; padding: 8px 12px; border: 1px solid #e0e0e0; border-radius: 4px;" oninput="filterResources()">
+                
+                <select id="resource-type-filter" onchange="filterResources()" style="padding: 8px 12px; border: 1px solid #e0e0e0; border-radius: 4px;">
+                    <option value="">All Types</option>
+                    <option value="image">Images</option>
+                    <option value="document">Documents</option>
+                    <option value="video">Videos</option>
+                    <option value="audio">Audio</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            
+            <!-- Content -->
+            <div id="resource-library-content" style="flex: 1; overflow-y: auto; padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; align-content: start;">
+                <!-- Resources will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Note Link Selector Modal -->
+    <div id="note-link-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 3000; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 8px; width: 90%; max-width: 500px; max-height: 80vh; box-shadow: 0 8px 32px rgba(0,0,0,0.2); display: flex; flex-direction: column;">
+            <div style="padding: 16px 20px; border-bottom: 1px solid #e5e5e5; display: flex; align-items: center; justify-content: space-between;">
+                <h3 style="margin: 0; font-size: 16px; font-weight: 600;">Link to another note</h3>
+                <button onclick="closeNoteLinkModal()" style="border: none; background: none; cursor: pointer; font-size: 24px; color: #6e6e6e;">&times;</button>
+            </div>
+            <div style="padding: 12px 20px; border-bottom: 1px solid #e5e5e5; background: #fafafa;">
+                <input type="text" id="note-link-search" placeholder="Search notes..." style="width: 100%; padding: 8px 12px; border: 1px solid #e0e0e0; border-radius: 4px;" oninput="filterNoteLinks()">
+            </div>
+            <div id="note-link-list" style="flex: 1; overflow-y: auto; padding: 10px;">
+                <!-- Note list will be loaded here -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- Hidden input for Word Import -->
+    <input type="file" id="word-import-input" accept=".docx" style="display: none;" onchange="handleWordImport(event)">
+
     <script>
         // Version: 2026-02-13 03:30 - Added Move To feature
         console.log('Script loaded - Version 3.30');
@@ -1087,6 +1361,10 @@
         let editingElement = null;
         let contextMenuTarget = null;
         let selectedCardId = null;
+
+        // Multi-tab state
+        let openedNotes = []; // Array of note objects { id, data, mode: 'view'|'edit'|'history', scrollPos: 0 }
+        let activeNoteId = null;
 
         const canvas = document.getElementById('canvas');
         const modal = document.getElementById('modal');
@@ -1167,7 +1445,23 @@
                     'improving': '🟡',
                     'standardized': '🟢'
                 };
-                const statusIcon = item.status && item.status !== 'none' && statusIcons[item.status] ? `<span style="font-size: 10px; margin-left: 4px;">${statusIcons[item.status]}</span>` : '';
+                
+                // Calculate folder status based on notes inside (priority: draft > improving > standardized > none)
+                let folderStatus = 'none';
+                if (item.notes && item.notes.length > 0) {
+                    const statusPriority = { 'draft': 3, 'improving': 2, 'standardized': 1, 'none': 0 };
+                    let highestPriority = 0;
+                    
+                    item.notes.forEach(note => {
+                        const priority = statusPriority[note.status] || 0;
+                        if (priority > highestPriority) {
+                            highestPriority = priority;
+                            folderStatus = note.status;
+                        }
+                    });
+                }
+                
+                const statusIcon = folderStatus && folderStatus !== 'none' && statusIcons[folderStatus] ? `<span style="font-size: 10px; margin-left: 4px;">${statusIcons[folderStatus]}</span>` : '';
 
                 return `
                     <div>
@@ -1179,7 +1473,7 @@
                              ondrop="dropNoteToFolder(event, ${item.id})">
                             <span class="tree-item-icon">${arrow}</span>
                             <span class="tree-item-name" contenteditable="false" onblur="saveItemName(${item.id}, 'folder', this)" onkeydown="handleKeyDown(event, this)">${item.name}</span>
-                            ${item.notes && item.notes.length === 0 && !item.children ? statusIcon : ''} 
+                            ${statusIcon}
                         </div>
                         <div class="tree-children ${isExpanded ? 'expanded' : ''}" id="folder-${item.id}">
                             ${item.notes ? item.notes.map(note => {
@@ -2575,8 +2869,96 @@
         }
 
         async function openNote(noteId) {
-            const res = await fetch(`/api/notes/${noteId}`);
-            const note = await res.json();
+            // Check if note is already open
+            let existingNote = openedNotes.find(n => n.id == noteId);
+            
+            if (!existingNote) {
+                const res = await fetch(`/api/notes/${noteId}`);
+                const noteData = await res.json();
+                existingNote = {
+                    id: noteId,
+                    data: noteData,
+                    mode: 'view',
+                    scrollPos: 0
+                };
+                openedNotes.push(existingNote);
+            }
+            
+            activeNoteId = noteId;
+            
+            // Show note panel, hide others
+            document.getElementById('welcome-screen').style.display = 'none';
+            document.getElementById('canvas-wrapper').style.display = 'none';
+            document.getElementById('note-panel').style.display = 'flex';
+
+            renderNoteTabs();
+            renderActiveNoteContent();
+        }
+
+        function renderNoteTabs() {
+            const tabsContainer = document.getElementById('note-tabs');
+            tabsContainer.innerHTML = openedNotes.map(note => `
+                <div class="note-tab ${note.id == activeNoteId ? 'active' : ''}" onclick="switchNote(${note.id})">
+                    <span class="tab-name">${note.data.name}</span>
+                    <span class="tab-close" onclick="closeNoteTab(${note.id}, event)">&times;</span>
+                </div>
+            `).join('');
+        }
+
+        function switchNote(noteId) {
+            if (activeNoteId == noteId) return;
+            
+            // Save current scroll position if needed (optional enhancement)
+            const activeNote = openedNotes.find(n => n.id == activeNoteId);
+            if (activeNote) {
+                const container = document.querySelector('#active-note-container > div:last-child');
+                if (container) activeNote.scrollPos = container.scrollTop;
+            }
+
+            activeNoteId = noteId;
+            renderNoteTabs();
+            renderActiveNoteContent();
+            
+            // Restore scroll position
+            setTimeout(() => {
+                const newActive = openedNotes.find(n => n.id == activeNoteId);
+                const container = document.querySelector('#active-note-container > div:last-child');
+                if (container && newActive) container.scrollTop = newActive.scrollPos;
+            }, 0);
+        }
+
+        function closeNoteTab(noteId, event) {
+            if (event) event.stopPropagation();
+            
+            const index = openedNotes.findIndex(n => n.id == noteId);
+            if (index === -1) return;
+            
+            openedNotes.splice(index, 1);
+            
+            if (openedNotes.length === 0) {
+                activeNoteId = null;
+                document.getElementById('note-panel').style.display = 'none';
+                document.getElementById('welcome-screen').style.display = 'flex';
+            } else if (activeNoteId == noteId) {
+                // Switch to adjacent tab
+                const nextNote = openedNotes[index] || openedNotes[index - 1];
+                switchNote(nextNote.id);
+            } else {
+                renderNoteTabs();
+            }
+        }
+
+        function renderActiveNoteContent() {
+            const noteObj = openedNotes.find(n => n.id == activeNoteId);
+            if (!noteObj) return;
+            
+            const note = noteObj.data;
+            const container = document.getElementById('active-note-container');
+            const notePanel = document.getElementById('note-panel');
+            
+            // Sync versions for history feature
+            notePanel.dataset.versions = JSON.stringify(note.versions || []);
+            notePanel.dataset.noteId = note.id;
             
             const statusColors = {
                 'none': 'transparent',
@@ -2590,8 +2972,7 @@
             // Render markdown content
             const renderedContent = note.content ? marked.parse(note.content) : '';
 
-            const notePanel = document.getElementById('note-panel');
-            notePanel.innerHTML = `
+            container.innerHTML = `
                 <div class="modal-header">
                     <div style="display: flex; flex-direction: column; gap: 4px;">
                         <h3 style="display: flex; align-items: center; gap: 8px;">
@@ -2608,12 +2989,26 @@
                             <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M12,9A3,3 0 0,0 9,12A3,3 0 0,0 12,15A3,3 0 0,0 15,12A3,3 0 0,0 12,9M12,17A5,5 0 0,1 7,12A5,5 0 0,1 12,7A5,5 0 0,1 17,12A5,5 0 0,1 12,17M12,4.5C7,4.5 2.73,7.61 1,12C2.73,16.39 7,19.5 12,19.5C17,19.5 21.27,16.39 23,12C21.27,7.61 17,4.5 12,4.5Z"/></svg>
                         </button>
                         <button onclick="editNote(${note.id})" class="btn btn-primary" id="edit-btn">Edit</button>
-                        <button onclick="closeNotePanel()" class="btn btn-secondary">Close</button>
+                        <button onclick="closeNotePanel()" class="btn btn-secondary">Close All</button>
                     </div>
                 </div>
-                <div style="flex: 1; overflow-y: auto; padding: 24px; max-width: 1400px; margin: 0 auto; width: 100%;">
+                <div style="flex: 1; overflow-y: auto; padding: 24px 24px 40px 24px; max-width: 1400px; margin: 0 auto; width: 100%;background-color: #fff;">
                     <div class="note-content-view" id="note-view">${renderedContent || '<i style="color: #999;">Empty note</i>'}</div>
                     <div id="edit-container" style="display: none; height: 100%;">
+                        <!-- Status Color Picker (Moved to Top) -->
+                        <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 12px;">
+                            <label style="font-size: 12px; color: #666; font-weight: 500;">Status:</label>
+                            <div style="display: flex; gap: 8px;">
+                                <button type="button" onclick="selectStatus('none')" class="status-color-btn" data-status="none" style="width: 28px; height: 28px; border-radius: 6px; border: 2px solid ${!note.status || note.status === 'none' ? '#333' : '#ddd'}; background: white; cursor: pointer; transition: all 0.15s; position: relative;" title="None">
+                                    <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); fill: #999;"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
+                                </button>
+                                <button type="button" onclick="selectStatus('draft')" class="status-color-btn" data-status="draft" style="width: 28px; height: 28px; border-radius: 6px; border: 2px solid ${note.status === 'draft' ? '#333' : '#ddd'}; background: #ef4444; cursor: pointer; transition: all 0.15s;" title="Red - Issues/Draft"></button>
+                                <button type="button" onclick="selectStatus('improving')" class="status-color-btn" data-status="improving" style="width: 28px; height: 28px; border-radius: 6px; border: 2px solid ${note.status === 'improving' ? '#333' : '#ddd'}; background: #f59e0b; cursor: pointer; transition: all 0.15s;" title="Yellow - In Progress"></button>
+                                <button type="button" onclick="selectStatus('standardized')" class="status-color-btn" data-status="standardized" style="width: 28px; height: 28px; border-radius: 6px; border: 2px solid ${note.status === 'standardized' ? '#333' : '#ddd'}; background: #10b981; cursor: pointer; transition: all 0.15s;" title="Green - Complete"></button>
+                            </div>
+                            <input type="hidden" id="note-status" value="${note.status || 'none'}">
+                        </div>
+
                         <!-- Markdown Toolbar -->
                         <div style="display: flex; gap: 4px; padding: 8px; background: #f6f8fa; border: 1px solid #e5e5e5; border-bottom: none; border-radius: 6px 6px 0 0;">
                             <button type="button" onclick="insertMarkdown('**', '**', 'bold text')" class="md-btn" title="Bold (Ctrl+B)">
@@ -2624,6 +3019,10 @@
                             </button>
                             <button type="button" onclick="insertMarkdown('~~', '~~', 'strikethrough')" class="md-btn" title="Strikethrough">
                                 <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M23,12V14H18.61C19.61,16.14 19.56,22 12.38,22C4.05,22.05 4.37,15.5 4.37,15.5L8.34,15.55C8.37,18.92 11.5,18.92 12.12,18.88C12.76,18.83 15.15,18.84 15.34,16.5C15.42,15.41 14.32,14.58 13.12,14H1V12H23M19.41,7.89L15.43,7.86C15.43,7.86 15.6,5.09 12.15,5.08C8.7,5.06 9,7.28 9,7.56C9.04,7.84 9.34,9.22 12,9.88H5.71C5.71,9.88 2.22,3.15 10.74,2C19.45,0.8 19.43,7.91 19.41,7.89Z"/></svg>
+                            </button>
+                            <div style="width: 1px; background: #e5e5e5; margin: 0 4px;"></div>
+                            <button type="button" onclick="triggerWordImport()" class="md-btn" title="Import Word Document" style="color: #2b579a;">
+                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M15.2,18.74L14.08,12.45L12.03,18.74H10.74L8.7,12.45L7.58,18.74H6.33L8.17,10.26H9.59L11.39,15.71L13.18,10.26H14.6L16.44,18.74H15.2Z"/></svg>
                             </button>
                             <div style="width: 1px; background: #e5e5e5; margin: 0 4px;"></div>
                             <button type="button" onclick="insertHeading(1)" class="md-btn" title="Heading 1">H1</button>
@@ -2650,8 +3049,15 @@
                             <button type="button" onclick="insertLink()" class="md-btn" title="Link">
                                 <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M3.9,12C3.9,10.29 5.29,8.9 7,8.9H11V7H7A5,5 0 0,0 2,12A5,5 0 0,0 7,17H11V15.1H7C5.29,15.1 3.9,13.71 3.9,12M8,13H16V11H8V13M17,7H13V8.9H17C18.71,8.9 20.1,10.29 20.1,12C20.1,13.71 18.71,15.1 17,15.1H13V17H17A5,5 0 0,0 22,12A5,5 0 0,0 17,7Z"/></svg>
                             </button>
+                            <button type="button" onclick="openNoteLinkSelector()" class="md-btn" title="Link to Note" style="color: #6366f1;">
+                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M12.5,14.5L14,15.5L12,17V19H14.5L16.5,17L21.5,22L22.5,21L17.5,16L19,14H21V11.5L22.5,10L17.5,5L16,6.5V9H14L12.5,7.5V11H10.5V13H12.5V14.5M11.5,3H12.5V5H11.5V3M20,3H21V5H20V3M20,19H21V21H20V19M3.5,14.5L5,13.5L7,15V13H9V12.5L10.5,11V7.5L9,6V4H6.5L4.5,6L2,3.5L1,4.5L6,9.5L4.5,11V14.5H3.5M4.5,19V21H3.5V19H4.5M4.5,3H3.5V5H4.5V3Z"/></svg>
+                            </button>
                             <button type="button" onclick="insertQuote()" class="md-btn" title="Quote">
                                 <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M14,17H17L19,13V7H13V13H16M6,17H9L11,13V7H5V13H8L6,17Z"/></svg>
+                            </button>
+                            <div style="width: 1px; background: #e5e5e5; margin: 0 4px;"></div>
+                            <button type="button" onclick="openResourceLibraryForInsert()" class="md-btn" title="Insert from Resource Library" style="color: #0066cc;">
+                                <svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor;"><path d="M21,19V5C21,3.89 20.1,3 19,3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19M8.5,13.5L11,16.5L14.5,12L19,18H5L8.5,13.5Z"/></svg>
                             </button>
                         </div>
                         <div class="split-editor">
@@ -2661,20 +3067,6 @@
                             <div class="preview-side note-content-view" id="preview-view"></div>
                         </div>
                         
-                        <div style="margin-top: 12px;">
-                            <label style="display: block; font-size: 12px; color: #666; margin-bottom: 8px;">Status Color</label>
-                            <div style="display: flex; gap: 8px;">
-                                <button type="button" onclick="selectStatus('none')" class="status-color-btn" data-status="none" style="width: 32px; height: 32px; border-radius: 6px; border: 2px solid ${!note.status || note.status === 'none' ? '#333' : '#ddd'}; background: white; cursor: pointer; transition: all 0.15s; position: relative;" title="None">
-                                    <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); fill: #999;"><path d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"/></svg>
-                                </button>
-                                <button type="button" onclick="selectStatus('draft')" class="status-color-btn" data-status="draft" style="width: 32px; height: 32px; border-radius: 6px; border: 2px solid ${note.status === 'draft' ? '#333' : '#ddd'}; background: #ef4444; cursor: pointer; transition: all 0.15s;" title="Red - Issues/Draft"></button>
-                                <button type="button" onclick="selectStatus('improving')" class="status-color-btn" data-status="improving" style="width: 32px; height: 32px; border-radius: 6px; border: 2px solid ${note.status === 'improving' ? '#333' : '#ddd'}; background: #f59e0b; cursor: pointer; transition: all 0.15s;" title="Yellow - In Progress"></button>
-                                <button type="button" onclick="selectStatus('standardized')" class="status-color-btn" data-status="standardized" style="width: 32px; height: 32px; border-radius: 6px; border: 2px solid ${note.status === 'standardized' ? '#333' : '#ddd'}; background: #10b981; cursor: pointer; transition: all 0.15s;" title="Green - Complete"></button>
-                            </div>
-                            <input type="hidden" id="note-status" value="${note.status || 'none'}">
-                        </div>
-
-                        <input type="text" id="change-note" placeholder="Describe your changes (optional)..." style="width: 100%; margin-top: 12px; padding: 8px; border: 1px solid #e0e0e0; border-radius: 4px; box-sizing: border-box;">
                     </div>
                     
                     <div id="history-container" style="display: none; padding-top: 16px; border-top: 1px solid #e5e5e5; margin-top: 16px;">
@@ -2685,7 +3077,7 @@
             `;
             
             // Store note data
-            notePanel.dataset.noteId = noteId;
+            notePanel.dataset.noteId = activeNoteId;
             notePanel.dataset.versions = JSON.stringify(note.versions || []);
             
             // Show note panel, hide others
@@ -2695,6 +3087,13 @@
         }
         
         function closeNotePanel() {
+            if (openedNotes.length > 0 && !confirm('Close all open note tabs? Any unsaved changes may be lost.')) {
+                return;
+            }
+            
+            openedNotes = [];
+            activeNoteId = null;
+            
             const notePanel = document.getElementById('note-panel');
             notePanel.style.display = 'none';
             
@@ -2715,20 +3114,32 @@
             
             viewEl.style.display = 'none';
             editContainer.style.display = 'block';
-            document.getElementById('note-content').focus();
             
-            // Initialize preview
+            const textarea = document.getElementById('note-content');
+            textarea.focus();
+            
+            // Initialize preview and height
             updatePreview();
+            autoExpandTextarea(textarea);
             
             editBtn.textContent = 'Save';
             editBtn.onclick = () => saveNote(noteId);
         }
         
+        function autoExpandTextarea(el) {
+            el.style.height = 'auto';
+            el.style.height = (el.scrollHeight) + 'px';
+        }
+
         function updatePreview() {
-            const content = document.getElementById('note-content').value;
+            const textarea = document.getElementById('note-content');
+            const content = textarea.value;
             const previewView = document.getElementById('preview-view');
             const renderedContent = content ? marked.parse(content) : '<i style="color: #999;">Empty note</i>';
             previewView.innerHTML = renderedContent;
+            
+            // Also update height
+            autoExpandTextarea(textarea);
         }
         
         let isPreviewMode = false;
@@ -2853,14 +3264,149 @@
         function insertChecklist() {
             insertList('- [ ] ');
         }
+
+        // Word Import logic
+        function triggerWordImport() {
+            document.getElementById('word-import-input').click();
+        }
+
+        async function handleWordImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const arrayBuffer = e.target.result;
+                try {
+                    // Convert docx to HTML
+                    const result = await mammoth.convertToHtml({arrayBuffer: arrayBuffer});
+                    const html = result.value; // The generated HTML
+                    
+                    // Convert HTML to Markdown
+                    const turndownService = new TurndownService({
+                        headingStyle: 'atx',
+                        codeBlockStyle: 'fenced'
+                    });
+                    const markdown = turndownService.turndown(html);
+                    
+                    // Append to editor
+                    const textarea = document.getElementById('note-content');
+                    const start = textarea.selectionStart;
+                    const end = textarea.selectionEnd;
+                    const currentValue = textarea.value;
+                    
+                    const newValue = currentValue.substring(0, start) + 
+                                     (currentValue && start > 0 ? '\n\n' : '') + 
+                                     markdown + 
+                                     currentValue.substring(end);
+                    
+                    textarea.value = newValue;
+                    updatePreview();
+                    
+                    // Reset input
+                    event.target.value = '';
+                } catch (err) {
+                    console.error('Word Import Error:', err);
+                    alert('Error importing Word document: ' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
         
         function insertLink() {
-            insertMarkdown('[', '](url)', 'link text');
+            const textarea = document.getElementById('note-content');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            
+            // If selected text looks like a URL, use it as href
+            const isUrl = selectedText.startsWith('http://') || selectedText.startsWith('https://');
+            
+            if (isUrl) {
+                insertMarkdown('[link text](', ')', selectedText);
+            } else {
+                insertMarkdown('[', '](https://)', selectedText || 'link text');
+            }
         }
         
         function insertQuote() {
             insertMarkdown('> ', '', 'quote');
         }
+
+        let allNotesForLinking = [];
+
+        async function openNoteLinkSelector() {
+            const res = await fetch('/api/notes');
+            allNotesForLinking = await res.json();
+            
+            document.getElementById('note-link-modal').style.display = 'flex';
+            document.getElementById('note-link-search').value = '';
+            document.getElementById('note-link-search').focus();
+            renderNoteLinkList(allNotesForLinking);
+        }
+
+        function closeNoteLinkModal() {
+            document.getElementById('note-link-modal').style.display = 'none';
+        }
+
+        function filterNoteLinks() {
+            const query = document.getElementById('note-link-search').value.toLowerCase();
+            const filtered = allNotesForLinking.filter(note => 
+                note.name.toLowerCase().includes(query)
+            );
+            renderNoteLinkList(filtered);
+        }
+
+        function renderNoteLinkList(notesList) {
+            const list = document.getElementById('note-link-list');
+            list.innerHTML = notesList.map(note => `
+                <div style="padding: 10px; border-radius: 4px; cursor: pointer; transition: background 0.1s;" 
+                     onmouseover="this.style.background='#f0f0ff'" 
+                     onmouseout="this.style.background='white'"
+                     onclick="insertNoteLink(${note.id}, '${note.name.replace(/'/g, "\\'")}')">
+                    <div style="font-weight: 500; font-size: 13px;">📄 ${note.name}</div>
+                    <div style="font-size: 11px; color: #888;">ID: ${note.id}</div>
+                </div>
+            `).join('');
+            
+            if (notesList.length === 0) {
+                list.innerHTML = '<div style="padding: 20px; text-align: center; color: #888; font-size: 13px;">No notes found</div>';
+            }
+        }
+
+        function insertNoteLink(noteId, noteName) {
+            const textarea = document.getElementById('note-content');
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const selectedText = textarea.value.substring(start, end);
+            
+            const linkName = selectedText || noteName;
+            const link = `[${linkName}](note:${noteId})`;
+            
+            textarea.value = textarea.value.substring(0, start) + link + textarea.value.substring(end);
+            textarea.focus();
+            textarea.selectionStart = textarea.selectionEnd = start + link.length;
+            
+            updatePreview();
+            closeNoteLinkModal();
+        }
+
+        // Global link click handler for internal note links
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('.note-content-view a');
+            if (link) {
+                const href = link.getAttribute('href');
+                if (!href) return;
+
+                if (href.startsWith('note:')) {
+                    e.preventDefault();
+                    const noteId = href.split(':')[1];
+                    openNote(noteId);
+                }
+                // External links (http/https) are handled natively by the browser 
+                // thanks to target="_blank" added by the marked renderer
+            }
+        });
         
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -2878,7 +3424,6 @@
 
         async function saveNote(noteId) {
             const content = document.getElementById('note-content').value;
-            const changeNote = document.getElementById('change-note').value;
             const status = document.getElementById('note-status').value;
 
             await fetch(`/api/notes/${noteId}`, {
@@ -2889,7 +3434,6 @@
                 },
                 body: JSON.stringify({ 
                     content, 
-                    change_note: changeNote,
                     status: status
                 })
             });
@@ -2898,53 +3442,25 @@
             const res = await fetch(`/api/notes/${noteId}`);
             const note = await res.json();
 
-            // Update view with rendered markdown
-            const viewEl = document.getElementById('note-view');
-            const editContainer = document.getElementById('edit-container');
-            const previewView = document.getElementById('preview-view');
-            const editBtn = document.getElementById('edit-btn');
-            const previewBtn = document.getElementById('preview-btn');
-            
-            const renderedContent = content ? marked.parse(content) : '<i style="color: #999;">Empty note</i>';
-            viewEl.innerHTML = renderedContent;
-            viewEl.style.display = 'block';
-            editContainer.style.display = 'none';
-            isPreviewMode = false;
-            
-            // Update status color indicator in header
-            const statusColors = {
-                'draft': '#ef4444',
-                'improving': '#f59e0b',
-                'standardized': '#10b981',
-                'none': 'transparent'
-            };
-            const statusIndicator = document.querySelector('.modal-header h3 span[title="Status indicator"]');
-            if (statusIndicator) {
-                if (note.status === 'none') {
-                    // Hide status indicator for 'none' status
-                    statusIndicator.style.display = 'none';
-                } else {
-                    // Show and update color for other statuses
-                    statusIndicator.style.display = 'inline-block';
-                    statusIndicator.style.background = statusColors[note.status || 'draft'];
-                }
+            // Update local state in openedNotes
+            const noteObj = openedNotes.find(n => n.id == noteId);
+            if (noteObj) {
+                noteObj.data = note;
+                noteObj.mode = 'view';
             }
-            
-            // Update version badge
-            const versionBadge = document.querySelector('.modal-header h3 span:not([title]):not([style*="background"])');
-            if (versionBadge) {
-                versionBadge.textContent = `v${note.current_version}`;
-            }
-            
-            editBtn.textContent = 'Edit';
-            editBtn.onclick = () => editNote(noteId);
-            
-            // Update card if exists
+
+            // Sync card data if present
             const card = cards.find(c => c.note && c.note.id === noteId);
             if (card) {
                 card.note.content = content;
                 card.note.status = status;
                 renderCards();
+            }
+
+            // Update UI if this note is still active
+            if (activeNoteId == noteId) {
+                renderActiveNoteContent();
+                renderNoteTabs(); // Update tab name if needed
             }
             
             // Reload folders to update sidebar
@@ -3323,6 +3839,7 @@
             const historyContainer = document.getElementById('history-container');
             const viewEl = document.getElementById('note-view');
             const editContainer = document.getElementById('edit-container');
+            const notePanel = document.getElementById('note-panel');
 
             if (historyContainer.style.display === 'none') {
                 // Show History
@@ -3330,19 +3847,23 @@
                 viewEl.style.display = 'none';
                 editContainer.style.display = 'none';
                 
-                const versions = JSON.parse(modal.dataset.versions || '[]');
+                const versions = JSON.parse(notePanel.dataset.versions || '[]');
                 const historyList = document.getElementById('history-list');
                 
                 if (versions.length === 0) {
                     historyList.innerHTML = '<div style="color: #888; font-style: italic;">No history available</div>';
                 } else {
                     historyList.innerHTML = versions.sort((a,b) => b.version - a.version).map(v => `
-                        <div class="history-item" onclick="viewVersionContent(${v.id})">
-                            <div class="history-meta">
-                                <span>v${v.version} - ${v.user ? v.user.username : 'Unknown'}</span>
-                                <span>${new Date(v.created_at).toLocaleString()}</span>
+                        <div class="history-item" style="padding: 12px; border: 1px solid #e5e5e5; border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span style="font-weight: 600; font-size: 13px;">v${v.version} - ${v.user ? (v.user.username || v.user.name) : 'Unknown'}</span>
+                                <span style="font-size: 11px; color: #999;">${new Date(v.created_at).toLocaleString()}</span>
                             </div>
-                            <div class="history-note">${v.change_note || 'No description'}</div>
+                            <div style="font-size: 12px; color: #666; margin-bottom: 8px;">${v.change_note || 'No description'}</div>
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="viewVersionContent(${v.id})" class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;">View Content</button>
+                                <button onclick="restoreVersion(${v.id})" class="btn btn-primary" style="padding: 4px 8px; font-size: 11px; background: #10b981;">Restore</button>
+                            </div>
                         </div>
                     `).join('');
                 }
@@ -3354,12 +3875,58 @@
         }
 
         function viewVersionContent(versionId) {
-            const versions = JSON.parse(modal.dataset.versions || '[]');
+            const notePanel = document.getElementById('note-panel');
+            const versions = JSON.parse(notePanel.dataset.versions || '[]');
             const version = versions.find(v => v.id === versionId);
             if (version) {
-                alert(`Viewing Content of v${version.version}:\n\n` + version.content);
-                // Future: Implement Restore button here
+                const viewEl = document.getElementById('note-view');
+                const historyContainer = document.getElementById('history-container');
+                
+                // Switch to view mode and show version content
+                historyContainer.style.display = 'none';
+                viewEl.style.display = 'block';
+                viewEl.innerHTML = `
+                    <div style="background: #fff8e1; padding: 12px; border-radius: 6px; margin-bottom: 20px; border: 1px solid #ffe082; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 13px; color: #795548;">Viewing <b>Version ${version.version}</b> (Historical Mode)</span>
+                        <button onclick="toggleHistory()" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;">Back to History</button>
+                    </div>
+                    ${version.content ? marked.parse(version.content) : '<i style="color: #999;">Empty version</i>'}
+                `;
             }
+        }
+
+        async function restoreVersion(versionId) {
+            const notePanel = document.getElementById('note-panel');
+            const versions = JSON.parse(notePanel.dataset.versions || '[]');
+            const version = versions.find(v => v.id === versionId);
+            const noteId = notePanel.dataset.noteId;
+            
+            if (!version || !confirm(`Restore note to Version ${version.version}? Current unsaved changes will be lost.`)) return;
+
+            await fetch(`/api/notes/${noteId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({ 
+                    content: version.content,
+                    change_note: `Restored to v${version.version}`
+                })
+            });
+
+            // Reload note to see changes
+            const res = await fetch(`/api/notes/${noteId}`);
+            const updatedNote = await res.json();
+            
+            // Sync with openedNotes
+            const noteObj = openedNotes.find(n => n.id == noteId);
+            if (noteObj) {
+                noteObj.data = updatedNote;
+            }
+            
+            renderActiveNoteContent();
+            renderNoteTabs();
         }
 
         // Initialize
@@ -3442,6 +4009,408 @@
                     console.error('Error moving note to root:', e);
                 }
             });
+        }
+        
+        // Resource Library Functions
+        let allResources = [];
+        let isInsertMode = false; // Track if we're in insert mode
+        
+        function openResourceLibraryForInsert() {
+            isInsertMode = true;
+            openResourceLibrary();
+        }
+        
+        async function openResourceLibrary() {
+            isInsertMode = false; // Reset unless called from openResourceLibraryForInsert
+            const modal = document.getElementById('resource-library-modal');
+            modal.style.display = 'flex';
+            await loadResources();
+        }
+        
+        function closeResourceLibrary() {
+            document.getElementById('resource-library-modal').style.display = 'none';
+            isInsertMode = false; // Reset insert mode
+        }
+        
+        async function loadResources() {
+            try {
+                const res = await fetch('/api/resources');
+                allResources = await res.json();
+                renderResources(allResources);
+            } catch (e) {
+                console.error('Error loading resources:', e);
+                alert('Failed to load resources');
+            }
+        }
+        
+        function filterResources() {
+            const search = document.getElementById('resource-search').value.toLowerCase();
+            const typeFilter = document.getElementById('resource-type-filter').value;
+            
+            let filtered = allResources.filter(resource => {
+                const matchesSearch = !search || 
+                    resource.name.toLowerCase().includes(search) ||
+                    (resource.description && resource.description.toLowerCase().includes(search));
+                const matchesType = !typeFilter || resource.type === typeFilter;
+                
+                return matchesSearch && matchesType;
+            });
+            
+            renderResources(filtered);
+        }
+        
+        function renderResources(resources) {
+            const container = document.getElementById('resource-library-content');
+            
+            if (resources.length === 0) {
+                container.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #999;">No resources found</div>';
+                return;
+            }
+            
+            container.innerHTML = resources.map(resource => {
+                const icon = getResourceIcon(resource.type);
+                const isImage = resource.type === 'image';
+                const thumbnail = isImage ? resource.url : '';
+                
+                return `
+                    <div class="resource-card" style="border: 1px solid #e5e5e5; border-radius: 8px; overflow: hidden; cursor: pointer; transition: all 0.2s; background: white;" onclick="selectResource(${resource.id}, event)">
+                        <div style="aspect-ratio: 1; background: ${isImage ? 'transparent' : '#f5f5f5'}; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                            ${isImage ? `<img src="${thumbnail}" style="width: 100%; height: 100%; object-fit: cover;">` : `<div style="font-size: 48px;">${icon}</div>`}
+                        </div>
+                        <div style="padding: 12px;">
+                            <div style="font-size: 13px; font-weight: 500; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${resource.name}">${resource.name}</div>
+                            <div style="font-size: 11px; color: #999;">${resource.formatted_size}</div>
+                            <div style="font-size: 11px; color: #666; margin-top: 4px;">
+                                <span style="background: #e8f4fd; color: #0066cc; padding: 2px 6px; border-radius: 3px;">${resource.type}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function getResourceIcon(type) {
+            const icons = {
+                'image': '🖼️',
+                'document': '📄',
+                'video': '🎥',
+                'audio': '🎵',
+                'other': '📎'
+            };
+            return icons[type] || icons.other;
+        }
+        
+        async function selectResource(resourceId, event) {
+            const resource = allResources.find(r => r.id === resourceId);
+            if (!resource) return;
+            
+            // If in insert mode, directly insert without prompting
+            if (isInsertMode) {
+                insertResourceIntoNote(resource);
+                return;
+            }
+            
+            // Show context menu instead of prompt
+            showResourceContextMenu(event, resource);
+        }
+        
+        let currentResource = null;
+        
+        function showResourceContextMenu(event, resource) {
+            currentResource = resource;
+            const menu = document.getElementById('resource-context-menu');
+            
+            // Update insert text based on resource type
+            const insertText = document.getElementById('resource-insert-text');
+            if (resource.type === 'image') {
+                insertText.textContent = 'Insert as Image';
+            } else {
+                insertText.textContent = 'Insert as Link';
+            }
+            
+            // Position menu at click location
+            menu.style.display = 'block';
+            menu.style.left = event.pageX + 'px';
+            menu.style.top = event.pageY + 'px';
+            
+            // Close menu when clicking outside
+            setTimeout(() => {
+                document.addEventListener('click', closeResourceContextMenu);
+            }, 0);
+        }
+        
+        function closeResourceContextMenu() {
+            document.getElementById('resource-context-menu').style.display = 'none';
+            document.removeEventListener('click', closeResourceContextMenu);
+        }
+        
+        async function resourceContextAction(action) {
+            if (!currentResource) return;
+            
+            const resource = currentResource;
+            closeResourceContextMenu();
+            
+            switch (action) {
+                case 'insert':
+                    if (resource.type === 'image') {
+                        insertResourceAsImage(resource);
+                    } else {
+                        insertResourceAsLink(resource);
+                    }
+                    break;
+                case 'copy':
+                    copyResourceLink(resource);
+                    currentResource = null; // Reset after copy
+                    break;
+                case 'download':
+                    downloadResource(resource);
+                    currentResource = null; // Reset after download
+                    break;
+                case 'details':
+                    viewResourceDetails(resource);
+                    currentResource = null; // Reset after view
+                    break;
+                case 'delete':
+                    await deleteResource(resource);
+                    currentResource = null; // Reset after delete
+                    break;
+            }
+            
+            // Don't reset currentResource here for insert action
+            // It will be reset after image size is selected
+        }
+        
+        function insertResourceIntoNote(resource) {
+            const textarea = document.getElementById('note-content');
+            if (!textarea) {
+                alert('Please open a note first');
+                return;
+            }
+            
+            // For images, show size selection
+            if (resource.type === 'image') {
+                currentResource = resource;
+                document.getElementById('image-size-modal').style.display = 'flex';
+                return;
+            }
+            
+            // For non-images, insert directly as link
+            const markdown = `\n[${resource.name}](${resource.url})\n`;
+            
+            // Insert at cursor position
+            const start = textarea.selectionStart;
+            const end = textarea.selectionEnd;
+            const text = textarea.value;
+            textarea.value = text.substring(0, start) + markdown + text.substring(end);
+            
+            // Move cursor after inserted text
+            textarea.selectionStart = textarea.selectionEnd = start + markdown.length;
+            textarea.focus();
+            
+            if (typeof updatePreview === 'function') updatePreview();
+            
+            closeResourceLibrary();
+            isInsertMode = false;
+        }
+        
+        function insertResourceAsImage(resource) {
+            const textarea = document.getElementById('note-content');
+            if (!textarea) {
+                alert('Please open a note first');
+                return;
+            }
+            
+            // Store resource for size selection
+            currentResource = resource;
+            
+            // Show size selection modal
+            document.getElementById('image-size-modal').style.display = 'flex';
+        }
+        
+        function closeImageSizeModal() {
+            document.getElementById('image-size-modal').style.display = 'none';
+            currentResource = null;
+        }
+        
+        function insertImageWithSize(size) {
+            console.log('insertImageWithSize called with size:', size);
+            console.log('currentResource:', currentResource);
+            
+            if (!currentResource) {
+                console.error('No currentResource');
+                alert('Error: No resource selected');
+                return;
+            }
+            
+            let textarea = document.getElementById('note-content');
+            
+            // If textarea not found, check if we need to open edit mode
+            if (!textarea) {
+                console.log('Textarea not found, checking if note panel exists');
+                const notePanel = document.getElementById('note-panel');
+                if (notePanel && notePanel.style.display !== 'none') {
+                    // Note is open but not in edit mode, try to get note ID and open edit
+                    const noteId = notePanel.dataset.noteId;
+                    if (noteId) {
+                        console.log('Opening edit mode for note:', noteId);
+                        editNote(noteId);
+                        // Wait a bit for edit mode to open
+                        setTimeout(() => {
+                            textarea = document.getElementById('note-content');
+                            if (textarea) {
+                                insertImageMarkdown(textarea, size, currentResource);
+                            } else {
+                                alert('Could not open edit mode. Please click Edit button first.');
+                                closeImageSizeModal();
+                            }
+                        }, 100);
+                        return;
+                    }
+                }
+                
+                console.error('No textarea found and cannot open edit mode');
+                alert('Please open a note and click Edit first');
+                closeImageSizeModal();
+                return;
+            }
+            
+            insertImageMarkdown(textarea, size, currentResource);
+        }
+        
+        function insertImageMarkdown(textarea, size, resource) {
+            let markdown;
+            
+            switch (size) {
+                case 'original':
+                    markdown = `\n![${resource.name}](${resource.url})\n`;
+                    break;
+                case 'large':
+                    markdown = `\n<img src="${resource.url}" alt="${resource.name}" width="800">\n`;
+                    break;
+                case 'medium':
+                    markdown = `\n<img src="${resource.url}" alt="${resource.name}" width="500">\n`;
+                    break;
+                case 'small':
+                    markdown = `\n<img src="${resource.url}" alt="${resource.name}" width="300">\n`;
+                    break;
+                case 'thumbnail':
+                    markdown = `\n<img src="${resource.url}" alt="${resource.name}" width="150">\n`;
+                    break;
+                case 'custom':
+                    const customSize = prompt('Enter width in pixels:', '400');
+                    if (!customSize) {
+                        closeImageSizeModal();
+                        return;
+                    }
+                    markdown = `\n<img src="${resource.url}" alt="${resource.name}" width="${customSize}">\n`;
+                    break;
+            }
+            
+            console.log('Inserting markdown:', markdown);
+            
+            // Insert at cursor position
+            const start = textarea.selectionStart || 0;
+            const end = textarea.selectionEnd || 0;
+            const text = textarea.value;
+            textarea.value = text.substring(0, start) + markdown + text.substring(end);
+            
+            // Move cursor after inserted text
+            textarea.selectionStart = textarea.selectionEnd = start + markdown.length;
+            textarea.focus();
+            
+            if (typeof updatePreview === 'function') updatePreview();
+            
+            closeImageSizeModal();
+            closeResourceLibrary();
+            
+            console.log('Image inserted successfully');
+        }
+        
+        function insertResourceAsLink(resource) {
+            const textarea = document.getElementById('note-content');
+            if (!textarea) {
+                alert('Please open a note first');
+                currentResource = null;
+                return;
+            }
+            
+            const markdown = `\n[${resource.name}](${resource.url})\n`;
+            textarea.value += markdown;
+            if (typeof updatePreview === 'function') updatePreview();
+            
+            closeResourceLibrary();
+            currentResource = null; // Reset after insert
+            alert('Link inserted into note!');
+        }
+        
+        function copyResourceLink(resource) {
+            navigator.clipboard.writeText(resource.url).then(() => {
+                alert('Link copied to clipboard!');
+            });
+        }
+        
+        function downloadResource(resource) {
+            window.open(`/api/resources/${resource.id}/download`, '_blank');
+        }
+        
+        function viewResourceDetails(resource) {
+            alert(`Name: ${resource.name}\nType: ${resource.type}\nSize: ${resource.formatted_size}\nUploaded: ${new Date(resource.created_at).toLocaleString()}\nDownloads: ${resource.download_count}\n\nURL: ${resource.url}`);
+        }
+        
+        async function deleteResource(resource) {
+            if (!confirm(`Delete "${resource.name}"?`)) return;
+            
+            try {
+                await fetch(`/api/resources/${resource.id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                });
+                
+                await loadResources();
+                alert('Resource deleted!');
+            } catch (e) {
+                console.error('Error deleting resource:', e);
+                alert('Failed to delete resource');
+            }
+        }
+        
+        async function uploadResource(event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+            
+            // Show uploading indicator
+            const uploadBtn = document.querySelector('#resource-library-modal button');
+            const originalText = uploadBtn.innerHTML;
+            uploadBtn.innerHTML = '<svg viewBox="0 0 24 24" style="width: 16px; height: 16px; fill: currentColor; animation: spin 1s linear infinite;"><path d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z"/></svg> Uploading...';
+            uploadBtn.disabled = true;
+            
+            for (let file of files) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('name', file.name);
+                // Category will be auto-set by backend based on file type
+                
+                try {
+                    await fetch('/api/resources', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: formData
+                    });
+                } catch (e) {
+                    console.error('Error uploading:', e);
+                    alert(`Failed to upload ${file.name}`);
+                }
+            }
+            
+            await loadResources();
+            event.target.value = ''; // Reset input
+            uploadBtn.innerHTML = originalText;
+            uploadBtn.disabled = false;
+            alert(`${files.length} file(s) uploaded successfully!`);
         }
         
         init();

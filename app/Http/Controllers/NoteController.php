@@ -74,20 +74,27 @@ class NoteController extends Controller
         ]);
 
         // Versioning Logic
-        if (isset($validated['content']) && $validated['content'] !== $note->content) {
+        $newContent = $validated['content'] ?? null;
+        $oldContent = $note->content;
+        
+        // Normalize line endings and trim for comparison
+        $normalizedNew = $newContent !== null ? trim(str_replace("\r\n", "\n", $newContent)) : null;
+        $normalizedOld = $oldContent !== null ? trim(str_replace("\r\n", "\n", $oldContent)) : null;
+
+        if ($normalizedNew !== null && $normalizedNew !== $normalizedOld) {
             // Archive current content as a version
             NoteVersion::create([
                 'note_id' => $note->id,
-                'user_id' => auth()->id(), // User making the change
-                'content' => $note->content, // Format: Save OLD content
-                'version' => $note->current_version,
+                'user_id' => auth()->id(),
+                'content' => $oldContent, // Save the actual old content
+                'version' => $note->current_version ?: 1,
                 'change_note' => $request->input('change_note', 'Auto-saved version'),
             ]);
 
-            $note->current_version = $note->current_version + 1;
+            $note->current_version = ($note->current_version ?: 1) + 1;
         }
 
-        $note->update($validated); // This updates content to new value
+        $note->fill($validated)->save();
 
         \App\Models\AuditLog::create([
             'user_id' => auth()->id(),

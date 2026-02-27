@@ -1731,7 +1731,14 @@
             if (!contextMenuTarget) return;
             
             const type = contextMenuTarget.dataset.type;
-            const id = type === 'folder' ? contextMenuTarget.dataset.id : contextMenuTarget.dataset.noteId;
+            let id;
+            if (type === 'note') {
+                id = contextMenuTarget.dataset.noteId;
+            } else if (type === 'canvas') {
+                id = contextMenuTarget.dataset.canvasId;
+            } else {
+                id = contextMenuTarget.dataset.id;
+            }
             
             switch(action) {
                 case 'newNote':
@@ -1779,6 +1786,16 @@
                             });
                             // Update folder cards on canvas
                             await updateFolderCards(id);
+                            loadFolders();
+                        }
+                    } else if (type === 'canvas') {
+                        if (confirm('Delete this canvas?')) {
+                            await fetch(`/api/canvases/${id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                                }
+                            });
                             loadFolders();
                         }
                     } else {
